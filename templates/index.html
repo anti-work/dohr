@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Doorbell Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>AI Doorbell Admin</h1>
+    <h2>Register New User</h2>
+    <form id="registerForm">
+        <label for="name">Name:</label>
+        <input type="text" id="name" required><br><br>
+        <label for="faceEncoding">Face Encoding:</label>
+        <input type="text" id="faceEncoding" required><br><br>
+        <label for="audioFile">Audio File:</label>
+        <input type="text" id="audioFile" required><br><br>
+        <button type="submit">Register</button>
+    </form>
+
+    <h2>Registered Users</h2>
+    <ul id="userList"></ul>
+
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const userList = document.getElementById('userList');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const faceEncoding = document.getElementById('faceEncoding').value;
+            const audioFile = document.getElementById('audioFile').value;
+
+            try {
+                await axios.post('/register', { name, face_encoding: faceEncoding, audio_file: audioFile });
+                alert('User registered successfully');
+                fetchUsers();
+            } catch (error) {
+                console.error('Error registering user:', error);
+                alert('Error registering user');
+            }
+        });
+
+        async function fetchUsers() {
+            try {
+                const response = await axios.get('/users');
+                userList.innerHTML = '';
+                response.data.forEach(user => {
+                    const li = document.createElement('li');
+                    li.textContent = `${user.name} - Audio: ${user.audio_file}`;
+                    userList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        fetchUsers();
+    </script>
+</body>
+</html>

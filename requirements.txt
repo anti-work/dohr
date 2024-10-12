@@ -1,0 +1,6 @@
+opencv-python
+requests
+pygame
+Flask
+python-dotenv
+
