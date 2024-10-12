@@ -1,6 +1,6 @@
 # Dohr
 
-This project implements an AI-powered doorbell system using a Raspberry Pi, camera, and speaker. The system captures photos, uses AI for image recognition, and plays customized audio responses based on the identified individual.
+This project implements an AI-powered doorbell system using a camera and speaker. The system captures photos, uses AI for image recognition, and plays customized audio responses based on the identified individual.
 
 ## Features
 
