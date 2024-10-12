@@ -15,6 +15,8 @@ This project implements an AI-powered doorbell system using a Raspberry Pi, came
 1. Install the required packages:
 
    ```
+   python3 -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    ```
 

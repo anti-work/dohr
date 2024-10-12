@@ -6,14 +6,10 @@ from flask import Flask, request, jsonify, render_template
 from threading import Thread, Event
 import base64
 import os
-from dotenv import load_dotenv
 import socket
 from contextlib import contextmanager
 import face_recognition
 import numpy as np
-
-# Load environment variables
-load_dotenv()
 
 # Initialize camera
 camera = cv2.VideoCapture(0)
