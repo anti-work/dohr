@@ -5,9 +5,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
 
 # Database
 *.db
+
+# Dlib (I needed to setup locally, but ideally not needed in the repo)
+dlib/
 
 # Captured images
 *.jpg

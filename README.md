@@ -1,42 +1,30 @@
 # Dohr
 
-This project implements an AI-powered doorbell system using a Raspberry Pi, camera, and speaker. The system captures photos, uses AI for image recognition, and plays customized audio responses based on the identified individual.
+This project implements an AI-powered doorbell system using a camera and speaker. The system captures photos, uses AI for image recognition, and plays customized audio responses based on the identified individual.
 
 ## Features
 
 - Continuous photo capture (every 5 seconds)
-- AI-powered image recognition using GPT-4 Vision API
+- AI-powered face recognition
 - Customized audio playback based on identification
 - Web interface for user registration and admin controls
-- Basic notification system for admins
-
-## Components
-
-- Raspberry Pi OS
-- Python environment
-- OpenCV for image capture and processing
-- GPT-4 Vision API for image recognition
-- Pygame for audio playback
-- Flask for hosting the admin interface
-- SQLite database for storing user information and preferences
+- Basic notification system
 
 ## Installation
 
-1. Clone this repository to your Raspberry Pi.
-2. Install the required packages:
+1. Install the required packages:
 
    ```
+   python3 -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    ```
-3. Add your GPT-4 Vision API key to a `.env` file in the root directory of the project.
 
-## Usage
+2. Run the main script:
 
-Run the main script:
-
-```
-python main.py
-```
+    ```
+    python main.py
+    ```
 
 ## Resetting the Database
 
