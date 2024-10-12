@@ -4,7 +4,7 @@ import requests
 import pygame
 import sqlite3
 from flask import Flask, request, jsonify, render_template
-from threading import Thread
+from threading import Thread, Event
 import base64
 import os
 from dotenv import load_dotenv
@@ -37,8 +37,24 @@ cursor.execute('''
 ''')
 conn.commit()
 
+# Add a new table for system state
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS system_state (
+        id INTEGER PRIMARY KEY,
+        is_paused BOOLEAN NOT NULL
+    )
+''')
+conn.commit()
+
+# Initialize system state
+cursor.execute("INSERT OR IGNORE INTO system_state (id, is_paused) VALUES (1, 0)")
+conn.commit()
+
 # Load the pre-trained face detection classifier
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Add an event for pausing
+pause_event = Event()
 
 def capture_photo():
     ret, frame = camera.read()
@@ -111,20 +127,21 @@ def notify_admin(message):
 
 def doorbell_loop():
     while True:
-        frame, image_path = capture_photo()
-        if frame is not None and image_path is not None:
-            if detect_face(frame):
-                recognized_name = recognize_person(image_path)
-                cursor.execute("SELECT audio_file FROM users WHERE name = ?", (recognized_name,))
-                result = cursor.fetchone()
-                if result:
-                    audio_file = result[0]
-                    play_audio(audio_file)
+        if not pause_event.is_set():
+            frame, image_path = capture_photo()
+            if frame is not None and image_path is not None:
+                if detect_face(frame):
+                    recognized_name = recognize_person(image_path)
+                    cursor.execute("SELECT audio_file FROM users WHERE name = ?", (recognized_name,))
+                    result = cursor.fetchone()
+                    if result:
+                        audio_file = result[0]
+                        play_audio(audio_file)
+                    else:
+                        play_audio("default_chime.mp3")
+                        notify_admin(f"Unrecognized person at the door: {recognized_name}")
                 else:
-                    play_audio("default_chime.mp3")
-                    notify_admin(f"Unrecognized person at the door: {recognized_name}")
-            else:
-                print("No face detected in the image")
+                    print("No face detected in the image")
         time.sleep(5)
 
 # Start the doorbell loop in a separate thread
@@ -154,6 +171,27 @@ def get_users():
     users = cursor.fetchall()
     return jsonify([{"id": user[0], "name": user[1], "audio_file": user[2]} for user in users])
 
+@app.route('/toggle_pause', methods=['POST'])
+def toggle_pause():
+    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+    current_state = cursor.fetchone()[0]
+    new_state = not current_state
+    cursor.execute("UPDATE system_state SET is_paused = ? WHERE id = 1", (new_state,))
+    conn.commit()
+
+    if new_state:
+        pause_event.set()
+    else:
+        pause_event.clear()
+
+    return jsonify({"is_paused": new_state}), 200
+
+@app.route('/get_pause_state', methods=['GET'])
+def get_pause_state():
+    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+    is_paused = cursor.fetchone()[0]
+    return jsonify({"is_paused": is_paused}), 200
+
 def find_free_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('', 0))
@@ -162,6 +200,14 @@ def find_free_port():
     return port
 
 if __name__ == '__main__':
+    # Check the initial pause state
+    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+    is_paused = cursor.fetchone()[0]
+    if is_paused:
+        pause_event.set()
+    else:
+        pause_event.clear()
+
     port = find_free_port()
     print(f"Starting server on port {port}")
     app.run(host='0.0.0.0', port=port)

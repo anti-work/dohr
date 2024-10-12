@@ -8,6 +8,8 @@
 </head>
 <body>
     <h1>Dohr Admin</h1>
+    <button id="togglePauseButton">Loading...</button>
+
     <h2>Register New User</h2>
     <form id="registerForm">
         <label for="name">Name:</label>
@@ -25,6 +27,7 @@
     <script>
         const registerForm = document.getElementById('registerForm');
         const userList = document.getElementById('userList');
+        const togglePauseButton = document.getElementById('togglePauseButton');
 
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -61,7 +64,33 @@
             }
         }
 
+        async function togglePause() {
+            try {
+                const response = await axios.post('/toggle_pause');
+                updatePauseButton(response.data.is_paused);
+            } catch (error) {
+                console.error('Error toggling pause state:', error);
+            }
+        }
+
+        async function getPauseState() {
+            try {
+                const response = await axios.get('/get_pause_state');
+                updatePauseButton(response.data.is_paused);
+            } catch (error) {
+                console.error('Error getting pause state:', error);
+            }
+        }
+
+        function updatePauseButton(isPaused) {
+            togglePauseButton.textContent = isPaused ? 'Unpause' : 'Pause';
+        }
+
+        togglePauseButton.addEventListener('click', togglePause);
+
+        // Initial setup
         fetchUsers();
+        getPauseState();
     </script>
 </body>
 </html>
