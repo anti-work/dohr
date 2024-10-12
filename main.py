@@ -78,6 +78,8 @@ def recognize_person(image_path):
     response = requests.post(api_url, headers=headers, json=payload)
     result = response.json()
 
+    print(result)
+
     # Process the result to extract the person's name
     # This is a simplified example, you'll need to parse the actual API response
     recognized_name = result['choices'][0]['message']['content']
