@@ -1,6 +1,5 @@
 import time
 import cv2
-import requests
 import pygame
 import sqlite3
 from flask import Flask, request, jsonify, render_template
@@ -10,6 +9,8 @@ import os
 from dotenv import load_dotenv
 import socket
 from contextlib import contextmanager
+import face_recognition
+import numpy as np
 
 # Load environment variables
 load_dotenv()
@@ -32,7 +33,8 @@ cursor.execute('''
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         audio_file TEXT,
-        photo BLOB
+        photo BLOB,
+        face_encoding BLOB
     )
 ''')
 conn.commit()
@@ -63,9 +65,6 @@ def get_db_cursor():
         cursor.close()
         conn.close()
 
-# Load the pre-trained face detection classifier
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
 # Add an event for pausing
 pause_event = Event()
 
@@ -76,56 +75,40 @@ def capture_photo():
         return frame, 'latest_capture.jpg'
     return None, None
 
-def detect_face(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    return len(faces) > 0
+def recognize_person(frame):
+    # Resize frame of video to 1/4 size for faster face recognition processing
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
 
-def recognize_person(image_path):
-    api_url = "https://api.openai.com/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('GPT4_VISION_API_KEY')}",
-        "Content-Type": "application/json"
-    }
+    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+    rgb_small_frame = small_frame[:, :, ::-1]
 
-    # Fetch all user photos from the database
-    cursor.execute("SELECT name, photo FROM users")
-    users = cursor.fetchall()
+    # Find all the faces and face encodings in the current frame of video
+    face_locations = face_recognition.face_locations(rgb_small_frame)
+    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-    # Prepare the content for the API request
-    content = [
-        {"type": "text", "text": "Who is in these images? Is there any match between the first image and the rest?"}
-    ]
+    # Fetch all user face encodings from the database
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT name, face_encoding FROM users")
+        known_faces = cursor.fetchall()
 
-    # Add the captured image
-    with open(image_path, "rb") as image_file:
-        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-    content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+    known_face_names = [face[0] for face in known_faces]
+    known_face_encodings = [np.frombuffer(face[1], dtype=np.float64) for face in known_faces]
 
-    # Add user photos
-    for user in users:
-        name, photo = user
-        base64_user_photo = base64.b64encode(photo).decode('utf-8')
-        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_user_photo}"}})
+    face_names = []
+    for face_encoding in face_encodings:
+        # See if the face is a match for the known face(s)
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        name = "Unknown"
 
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [
-            {
-                "role": "user",
-                "content": content
-            }
-        ],
-        "max_tokens": 300
-    }
+        # Use the known face with the smallest distance to the new face
+        face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+        best_match_index = np.argmin(face_distances)
+        if matches[best_match_index]:
+            name = known_face_names[best_match_index]
 
-    response = requests.post(api_url, headers=headers, json=payload)
-    result = response.json()
+        face_names.append(name)
 
-    print(result)
-
-    recognized_name = result['choices'][0]['message']['content']
-    return recognized_name
+    return face_names[0] if face_names else "Unknown"
 
 def play_audio(audio_data):
     temp_file = 'temp_audio.mp3'
@@ -145,10 +128,11 @@ def doorbell_loop():
         if not pause_event.is_set():
             frame, image_path = capture_photo()
             if frame is not None and image_path is not None:
-                if detect_face(frame):
-                    recognized_name = recognize_person(image_path)
-                    cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
-                    result = cursor.fetchone()
+                recognized_name = recognize_person(frame)
+                if recognized_name != "Unknown":
+                    with get_db_cursor() as cursor:
+                        cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
+                        result = cursor.fetchone()
                     if result:
                         audio_data = result[0]
                         play_audio(audio_data)
@@ -156,9 +140,12 @@ def doorbell_loop():
                         with open("default_chime.mp3", "rb") as f:
                             default_audio = f.read()
                         play_audio(default_audio)
-                        notify_admin(f"Unrecognized person at the door: {recognized_name}")
+                        notify_admin(f"Recognized person at the door: {recognized_name}")
                 else:
-                    print("No face detected in the image")
+                    with open("default_chime.mp3", "rb") as f:
+                        default_audio = f.read()
+                    play_audio(default_audio)
+                    notify_admin("Unrecognized person at the door")
         time.sleep(5)
 
 # Start the doorbell loop in a separate thread
@@ -177,9 +164,13 @@ def register_user():
     audio = base64.b64decode(data['audio'])
     photo = base64.b64decode(data['photo'])
 
+    # Generate face encoding
+    image = face_recognition.load_image_file(io.BytesIO(photo))
+    face_encoding = face_recognition.face_encodings(image)[0]
+
     with get_db_cursor() as cursor:
-        cursor.execute("INSERT INTO users (name, audio, photo) VALUES (?, ?, ?)",
-                       (name, audio, photo))
+        cursor.execute("INSERT INTO users (name, audio, photo, face_encoding) VALUES (?, ?, ?, ?)",
+                       (name, audio, photo, face_encoding.tobytes()))
     return jsonify({"message": "User registered successfully"}), 201
 
 @app.route('/users', methods=['GET'])

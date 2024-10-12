@@ -5,38 +5,24 @@ This project implements an AI-powered doorbell system using a Raspberry Pi, came
 ## Features
 
 - Continuous photo capture (every 5 seconds)
-- AI-powered image recognition using GPT-4 Vision API
+- AI-powered face recognition
 - Customized audio playback based on identification
 - Web interface for user registration and admin controls
-- Basic notification system for admins
-
-## Components
-
-- Raspberry Pi OS
-- Python environment
-- OpenCV for image capture and processing
-- GPT-4 Vision API for image recognition
-- Pygame for audio playback
-- Flask for hosting the admin interface
-- SQLite database for storing user information and preferences
+- Basic notification system
 
 ## Installation
 
-1. Clone this repository to your Raspberry Pi.
-2. Install the required packages:
+1. Install the required packages:
 
    ```
    pip install -r requirements.txt
    ```
-3. Add your GPT-4 Vision API key to a `.env` file in the root directory of the project.
+2. Add your GPT-4 Vision API key to a `.env` file in the root directory of the project.
+3. Run the main script:
 
-## Usage
-
-Run the main script:
-
-```
-python main.py
-```
+    ```
+    python main.py
+    ```
 
 ## Resetting the Database
 

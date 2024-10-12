@@ -3,4 +3,7 @@ requests
 pygame
 Flask
 python-dotenv
-
+face_recognition
+dlib
+setuptools
+numpy
