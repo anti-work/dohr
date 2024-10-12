@@ -17,8 +17,8 @@ This project implements an AI-powered doorbell system using a Raspberry Pi, came
    ```
    pip install -r requirements.txt
    ```
-2. Add your GPT-4 Vision API key to a `.env` file in the root directory of the project.
-3. Run the main script:
+
+2. Run the main script:
 
     ```
     python main.py
