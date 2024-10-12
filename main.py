@@ -11,6 +11,11 @@ from contextlib import contextmanager
 import face_recognition
 import numpy as np
 import io
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Initialize camera
 camera = cv2.VideoCapture(0)
@@ -147,9 +152,19 @@ def play_audio(audio_data):
     os.remove(temp_file)
 
 def notify_admin(message):
-    # Placeholder for admin notification system
-    # You can implement email, SMS, or push notifications here
     print(f"Admin Notification: {message}")
+
+    # Send Slack message
+    if SLACK_WEBHOOK_URL:
+        payload = {"text": message}
+        try:
+            response = requests.post(SLACK_WEBHOOK_URL, json=payload)
+            response.raise_for_status()
+            print(f"Slack notification sent: {message}")
+        except requests.RequestException as e:
+            print(f"Failed to send Slack notification: {e}")
+    else:
+        print("Slack webhook URL not set. Skipping Slack notification.")
 
 def doorbell_loop():
     while True:
@@ -165,7 +180,7 @@ def doorbell_loop():
                         if result:
                             audio_data = result[0]
                             play_audio(audio_data)
-                            notify_admin(f"Recognized person at the door: {recognized_name}")
+                            notify_admin(f"{recognized_name} is in the building!")
                         else:
                             with open("default_chime.mp3", "rb") as f:
                                 default_audio = f.read()
