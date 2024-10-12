@@ -1,11 +1,11 @@
 # Environments
 .env
-.venv
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
 
 # Database
 *.db
