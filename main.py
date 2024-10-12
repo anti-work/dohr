@@ -10,6 +10,7 @@ import socket
 from contextlib import contextmanager
 import face_recognition
 import numpy as np
+import io
 
 # Initialize camera
 camera = cv2.VideoCapture(0)
