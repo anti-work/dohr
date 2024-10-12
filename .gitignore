@@ -10,6 +10,9 @@ __pycache__/
 # Database
 *.db
 
+# Dlib (I needed to setup locally, but ideally not needed in the repo)
+dlib/
+
 # Captured images
 *.jpg
 
