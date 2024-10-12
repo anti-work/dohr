@@ -13,6 +13,7 @@ import numpy as np
 import io
 import requests
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -50,6 +51,15 @@ cursor.execute('''
 conn.commit()
 # Initialize system state
 cursor.execute("INSERT OR IGNORE INTO system_state (id, is_paused) VALUES (1, 0)")
+conn.commit()
+# Add a new table to track people entrances
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS entrances (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+''')
 conn.commit()
 
 # Create a new connection for each thread
@@ -166,6 +176,24 @@ def notify_admin(message):
     else:
         print("Slack webhook URL not set. Skipping Slack notification.")
 
+    # Send Telegram message
+    TELEGRAM_API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
+    TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+    if TELEGRAM_API_TOKEN and TELEGRAM_CHAT_ID:
+        telegram_url = f"https://api.telegram.org/bot{TELEGRAM_API_TOKEN}/sendMessage"
+        telegram_payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message
+        }
+        try:
+            response = requests.post(telegram_url, json=telegram_payload)
+            response.raise_for_status()
+            print(f"Telegram notification sent: {message}")
+        except requests.RequestException as e:
+            print(f"Failed to send Telegram notification: {e}")
+    else:
+        print("Telegram API token or chat ID not set. Skipping Telegram notification.")
+
 def doorbell_loop():
     while True:
         if not pause_event.is_set():
@@ -175,17 +203,21 @@ def doorbell_loop():
                 if recognized_name != "No one":
                     if recognized_name != "Unknown":
                         with get_db_cursor() as cursor:
-                            cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
-                            result = cursor.fetchone()
-                        if result:
-                            audio_data = result[0]
-                            play_audio(audio_data)
-                            notify_admin(f"{recognized_name} is in the building!")
-                        else:
-                            with open("default_chime.mp3", "rb") as f:
-                                default_audio = f.read()
-                            play_audio(default_audio)
-                            notify_admin("Unrecognized person at the door")
+                            # Check if the person has entered today
+                            cursor.execute("SELECT * FROM entrances WHERE name = ? AND timestamp > ?",
+                                           (recognized_name, datetime.now() - timedelta(days=1)))
+                            if not cursor.fetchone():
+                                # If not, play audio and notify
+                                cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
+                                result = cursor.fetchone()
+                                if result:
+                                    audio_data = result[0]
+                                    play_audio(audio_data)
+                                    notify_admin(f"{recognized_name} is in the building!")
+                                    # Record the entrance
+                                    cursor.execute("INSERT INTO entrances (name) VALUES (?)", (recognized_name,))
+                            else:
+                                print(f"{recognized_name} has already entered today. Skipping notification.")
                     else:
                         with open("default_chime.mp3", "rb") as f:
                             default_audio = f.read()
