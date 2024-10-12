@@ -51,7 +51,6 @@
                         photo: photoReader.result.split(',')[1],
                         audio: base64Audio
                     });
-                    alert('User registered successfully');
                     fetchUsers();
                 } catch (error) {
                     console.error('Error registering user:', error);
@@ -69,6 +68,7 @@
                 response.data.forEach(user => {
                     const li = document.createElement('li');
                     li.innerHTML = `
+                        <img src="data:image/jpeg;base64,${user.photo}" alt="${user.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%;">
                         ${user.name} -
                         <audio controls>
                             <source src="data:audio/mpeg;base64,${user.audio}" type="audio/mpeg">
@@ -86,7 +86,6 @@
         async function removeUser(userId) {
             try {
                 await axios.delete(`/users/${userId}`);
-                alert('User removed successfully');
                 fetchUsers();
             } catch (error) {
                 console.error('Error removing user:', error);

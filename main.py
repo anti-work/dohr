@@ -23,6 +23,31 @@ pygame.mixer.init()
 # Initialize Flask app
 app = Flask(__name__)
 
+# Database setup
+conn = sqlite3.connect('doorbell.db', check_same_thread=False)
+cursor = conn.cursor()
+# Create users table if not exists
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        audio_file TEXT,
+        photo BLOB
+    )
+''')
+conn.commit()
+# Add a new table for system state
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS system_state (
+        id INTEGER PRIMARY KEY,
+        is_paused BOOLEAN NOT NULL
+    )
+''')
+conn.commit()
+# Initialize system state
+cursor.execute("INSERT OR IGNORE INTO system_state (id, is_paused) VALUES (1, 0)")
+conn.commit()
+
 # Create a new connection for each thread
 def get_db_connection():
     return sqlite3.connect('doorbell.db', check_same_thread=False)
@@ -99,8 +124,6 @@ def recognize_person(image_path):
 
     print(result)
 
-    # Process the result to extract the person's name
-    # You'll need to parse the actual API response to determine if there's a match
     recognized_name = result['choices'][0]['message']['content']
     return recognized_name
 
@@ -162,9 +185,9 @@ def register_user():
 @app.route('/users', methods=['GET'])
 def get_users():
     with get_db_cursor() as cursor:
-        cursor.execute("SELECT id, name, audio FROM users")
+        cursor.execute("SELECT id, name, audio, photo FROM users")
         users = cursor.fetchall()
-    return jsonify([{"id": user[0], "name": user[1], "audio": base64.b64encode(user[2]).decode('utf-8')} for user in users])
+    return jsonify([{"id": user[0], "name": user[1], "audio": base64.b64encode(user[2]).decode('utf-8'), "photo": base64.b64encode(user[3]).decode('utf-8')} for user in users])
 
 @app.route('/users/<int:user_id>', methods=['DELETE'])
 def remove_user(user_id):
