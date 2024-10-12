@@ -24,6 +24,7 @@ This project implements an AI-powered doorbell system using a Raspberry Pi, came
 
 1. Clone this repository to your Raspberry Pi.
 2. Install the required packages:
+
    ```
    pip install -r requirements.txt
    ```
