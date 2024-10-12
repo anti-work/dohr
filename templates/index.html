@@ -16,8 +16,8 @@
         <input type="text" id="name" required><br><br>
         <label for="photo">Photo:</label>
         <input type="file" id="photo" accept="image/*" required><br><br>
-        <label for="audioFile">Audio File:</label>
-        <input type="text" id="audioFile" required><br><br>
+        <label for="audio">Audio:</label>
+        <input type="file" id="audio" accept="audio/*" required><br><br>
         <button type="submit">Register</button>
     </form>
 
@@ -33,13 +33,24 @@
             e.preventDefault();
             const name = document.getElementById('name').value;
             const photo = document.getElementById('photo').files[0];
-            const audioFile = document.getElementById('audioFile').value;
+            const audio = document.getElementById('audio').files[0];
 
-            const reader = new FileReader();
-            reader.onload = async function() {
-                const base64Photo = reader.result.split(',')[1];
+            const photoReader = new FileReader();
+            const audioReader = new FileReader();
+
+            photoReader.onload = function() {
+                const base64Photo = photoReader.result.split(',')[1];
+                audioReader.readAsDataURL(audio);
+            };
+
+            audioReader.onload = async function() {
+                const base64Audio = audioReader.result.split(',')[1];
                 try {
-                    await axios.post('/register', { name, photo: base64Photo, audio_file: audioFile });
+                    await axios.post('/register', {
+                        name,
+                        photo: photoReader.result.split(',')[1],
+                        audio: base64Audio
+                    });
                     alert('User registered successfully');
                     fetchUsers();
                 } catch (error) {
@@ -47,7 +58,8 @@
                     alert('Error registering user');
                 }
             };
-            reader.readAsDataURL(photo);
+
+            photoReader.readAsDataURL(photo);
         });
 
         async function fetchUsers() {
@@ -56,11 +68,29 @@
                 userList.innerHTML = '';
                 response.data.forEach(user => {
                     const li = document.createElement('li');
-                    li.textContent = `${user.name} - Audio: ${user.audio_file}`;
+                    li.innerHTML = `
+                        ${user.name} -
+                        <audio controls>
+                            <source src="data:audio/mpeg;base64,${user.audio}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button onclick="removeUser(${user.id})">Remove</button>
+                    `;
                     userList.appendChild(li);
                 });
             } catch (error) {
                 console.error('Error fetching users:', error);
+            }
+        }
+
+        async function removeUser(userId) {
+            try {
+                await axios.delete(`/users/${userId}`);
+                alert('User removed successfully');
+                fetchUsers();
+            } catch (error) {
+                console.error('Error removing user:', error);
+                alert('Error removing user');
             }
         }
 

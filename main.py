@@ -9,6 +9,7 @@ import base64
 import os
 from dotenv import load_dotenv
 import socket
+from contextlib import contextmanager
 
 # Load environment variables
 load_dotenv()
@@ -22,33 +23,20 @@ pygame.mixer.init()
 # Initialize Flask app
 app = Flask(__name__)
 
-# Database setup
-conn = sqlite3.connect('doorbell.db', check_same_thread=False)
-cursor = conn.cursor()
+# Create a new connection for each thread
+def get_db_connection():
+    return sqlite3.connect('doorbell.db', check_same_thread=False)
 
-# Create users table if not exists
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        audio_file TEXT,
-        photo BLOB
-    )
-''')
-conn.commit()
-
-# Add a new table for system state
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS system_state (
-        id INTEGER PRIMARY KEY,
-        is_paused BOOLEAN NOT NULL
-    )
-''')
-conn.commit()
-
-# Initialize system state
-cursor.execute("INSERT OR IGNORE INTO system_state (id, is_paused) VALUES (1, 0)")
-conn.commit()
+@contextmanager
+def get_db_cursor():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        yield cursor
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
 
 # Load the pre-trained face detection classifier
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -116,9 +104,13 @@ def recognize_person(image_path):
     recognized_name = result['choices'][0]['message']['content']
     return recognized_name
 
-def play_audio(audio_file):
-    pygame.mixer.music.load(audio_file)
+def play_audio(audio_data):
+    temp_file = 'temp_audio.mp3'
+    with open(temp_file, 'wb') as f:
+        f.write(audio_data)
+    pygame.mixer.music.load(temp_file)
     pygame.mixer.music.play()
+    os.remove(temp_file)
 
 def notify_admin(message):
     # Placeholder for admin notification system
@@ -132,13 +124,15 @@ def doorbell_loop():
             if frame is not None and image_path is not None:
                 if detect_face(frame):
                     recognized_name = recognize_person(image_path)
-                    cursor.execute("SELECT audio_file FROM users WHERE name = ?", (recognized_name,))
+                    cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
                     result = cursor.fetchone()
                     if result:
-                        audio_file = result[0]
-                        play_audio(audio_file)
+                        audio_data = result[0]
+                        play_audio(audio_data)
                     else:
-                        play_audio("default_chime.mp3")
+                        with open("default_chime.mp3", "rb") as f:
+                            default_audio = f.read()
+                        play_audio(default_audio)
                         notify_admin(f"Unrecognized person at the door: {recognized_name}")
                 else:
                     print("No face detected in the image")
@@ -157,27 +151,37 @@ def index():
 def register_user():
     data = request.json
     name = data['name']
-    audio_file = data['audio_file']
+    audio = base64.b64decode(data['audio'])
     photo = base64.b64decode(data['photo'])
 
-    cursor.execute("INSERT INTO users (name, audio_file, photo) VALUES (?, ?, ?)",
-                   (name, audio_file, photo))
-    conn.commit()
+    with get_db_cursor() as cursor:
+        cursor.execute("INSERT INTO users (name, audio, photo) VALUES (?, ?, ?)",
+                       (name, audio, photo))
     return jsonify({"message": "User registered successfully"}), 201
 
 @app.route('/users', methods=['GET'])
 def get_users():
-    cursor.execute("SELECT id, name, audio_file FROM users")
-    users = cursor.fetchall()
-    return jsonify([{"id": user[0], "name": user[1], "audio_file": user[2]} for user in users])
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT id, name, audio FROM users")
+        users = cursor.fetchall()
+    return jsonify([{"id": user[0], "name": user[1], "audio": base64.b64encode(user[2]).decode('utf-8')} for user in users])
+
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+def remove_user(user_id):
+    with get_db_cursor() as cursor:
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        if cursor.rowcount > 0:
+            return jsonify({"message": "User removed successfully"}), 200
+        else:
+            return jsonify({"message": "User not found"}), 404
 
 @app.route('/toggle_pause', methods=['POST'])
 def toggle_pause():
-    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
-    current_state = cursor.fetchone()[0]
-    new_state = not current_state
-    cursor.execute("UPDATE system_state SET is_paused = ? WHERE id = 1", (new_state,))
-    conn.commit()
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+        current_state = cursor.fetchone()[0]
+        new_state = not current_state
+        cursor.execute("UPDATE system_state SET is_paused = ? WHERE id = 1", (new_state,))
 
     if new_state:
         pause_event.set()
@@ -188,8 +192,9 @@ def toggle_pause():
 
 @app.route('/get_pause_state', methods=['GET'])
 def get_pause_state():
-    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
-    is_paused = cursor.fetchone()[0]
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+        is_paused = cursor.fetchone()[0]
     return jsonify({"is_paused": is_paused}), 200
 
 def find_free_port():
@@ -201,8 +206,9 @@ def find_free_port():
 
 if __name__ == '__main__':
     # Check the initial pause state
-    cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
-    is_paused = cursor.fetchone()[0]
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
+        is_paused = cursor.fetchone()[0]
     if is_paused:
         pause_event.set()
     else:
