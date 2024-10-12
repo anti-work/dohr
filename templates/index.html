@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Doorbell Admin</title>
+    <title>Dohr Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <h1>AI Doorbell Admin</h1>
+    <h1>Dohr Admin</h1>
     <h2>Register New User</h2>
     <form id="registerForm">
         <label for="name">Name:</label>
         <input type="text" id="name" required><br><br>
-        <label for="faceEncoding">Face Encoding:</label>
-        <input type="text" id="faceEncoding" required><br><br>
+        <label for="photo">Photo:</label>
+        <input type="file" id="photo" accept="image/*" required><br><br>
         <label for="audioFile">Audio File:</label>
         <input type="text" id="audioFile" required><br><br>
         <button type="submit">Register</button>
@@ -29,17 +29,22 @@
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value;
-            const faceEncoding = document.getElementById('faceEncoding').value;
+            const photo = document.getElementById('photo').files[0];
             const audioFile = document.getElementById('audioFile').value;
 
-            try {
-                await axios.post('/register', { name, face_encoding: faceEncoding, audio_file: audioFile });
-                alert('User registered successfully');
-                fetchUsers();
-            } catch (error) {
-                console.error('Error registering user:', error);
-                alert('Error registering user');
-            }
+            const reader = new FileReader();
+            reader.onload = async function() {
+                const base64Photo = reader.result.split(',')[1];
+                try {
+                    await axios.post('/register', { name, photo: base64Photo, audio_file: audioFile });
+                    alert('User registered successfully');
+                    fetchUsers();
+                } catch (error) {
+                    console.error('Error registering user:', error);
+                    alert('Error registering user');
+                }
+            };
+            reader.readAsDataURL(photo);
         });
 
         async function fetchUsers() {

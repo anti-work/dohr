@@ -3,7 +3,7 @@ import cv2
 import requests
 import pygame
 import sqlite3
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from threading import Thread
 import base64
 import os
@@ -31,8 +31,8 @@ cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        face_encoding TEXT,
-        audio_file TEXT
+        audio_file TEXT,
+        photo BLOB
     )
 ''')
 conn.commit()
@@ -58,18 +58,33 @@ def recognize_person(image_path):
         "Authorization": f"Bearer {os.getenv('GPT4_VISION_API_KEY')}",
         "Content-Type": "application/json"
     }
+
+    # Fetch all user photos from the database
+    cursor.execute("SELECT name, photo FROM users")
+    users = cursor.fetchall()
+
+    # Prepare the content for the API request
+    content = [
+        {"type": "text", "text": "Who is in these images? Is there any match between the first image and the rest?"}
+    ]
+
+    # Add the captured image
     with open(image_path, "rb") as image_file:
         base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+    content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+
+    # Add user photos
+    for user in users:
+        name, photo = user
+        base64_user_photo = base64.b64encode(photo).decode('utf-8')
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_user_photo}"}})
 
     payload = {
-        "model": "gpt-4-vision-preview",
+        "model": "gpt-4o-mini",
         "messages": [
             {
                 "role": "user",
-                "content": [
-                    {"type": "text", "text": "Who is in this image?"},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                ]
+                "content": content
             }
         ],
         "max_tokens": 300
@@ -81,7 +96,7 @@ def recognize_person(image_path):
     print(result)
 
     # Process the result to extract the person's name
-    # This is a simplified example, you'll need to parse the actual API response
+    # You'll need to parse the actual API response to determine if there's a match
     recognized_name = result['choices'][0]['message']['content']
     return recognized_name
 
@@ -117,15 +132,19 @@ doorbell_thread = Thread(target=doorbell_loop)
 doorbell_thread.start()
 
 # Flask routes for web interface
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 @app.route('/register', methods=['POST'])
 def register_user():
     data = request.json
     name = data['name']
-    face_encoding = data['face_encoding']
     audio_file = data['audio_file']
+    photo = base64.b64decode(data['photo'])
 
-    cursor.execute("INSERT INTO users (name, face_encoding, audio_file) VALUES (?, ?, ?)",
-                   (name, face_encoding, audio_file))
+    cursor.execute("INSERT INTO users (name, audio_file, photo) VALUES (?, ?, ?)",
+                   (name, audio_file, photo))
     conn.commit()
     return jsonify({"message": "User registered successfully"}), 201
 

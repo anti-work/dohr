@@ -1,4 +1,4 @@
-# AI-Powered Doorbell System
+# Dohr
 
 This project implements an AI-powered doorbell system using a Raspberry Pi, camera, and speaker. The system captures photos, uses AI for image recognition, and plays customized audio responses based on the identified individual.
 
@@ -36,4 +36,12 @@ Run the main script:
 
 ```
 python main.py
+```
+
+## Resetting the Database
+
+If you need to reset the database and start fresh, you can use the `reset.py` script:
+
+```
+python reset.py
 ```
