@@ -165,6 +165,7 @@ def notify_admin(message):
     print(f"Admin Notification: {message}")
 
     # Send Slack message
+    SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
     if SLACK_WEBHOOK_URL:
         payload = {"text": message}
         try:
