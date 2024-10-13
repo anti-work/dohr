@@ -6,3 +6,4 @@ face_recognition
 dlib
 setuptools
 numpy
+python-dotenv
