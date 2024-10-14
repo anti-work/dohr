@@ -26,6 +26,21 @@ This project implements an AI-powered doorbell system using a camera and speaker
     python main.py
     ```
 
+### Debugging
+
+If you get a dlib-related error, it may be that the system is trying to load a library file (_dlib_pybind11.cpython-39-darwin.so) that was compiled for x86_64 architecture, but your system needs an ARM64 version.
+
+Run this to fix:
+
+```
+pip uninstall dlib face_recognition
+brew install cmake
+git clone https://github.com/davisking/dlib.git
+cd dlib
+pip install . # or python setup.py install
+pip install face_recognition
+```
+
 ## Resetting the Database
 
 If you need to reset the database and start fresh, you can use the `reset.py` script:
