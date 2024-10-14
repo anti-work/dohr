@@ -34,10 +34,7 @@ Run this to fix:
 
 ```
 pip uninstall dlib face_recognition
-brew install cmake
-git clone https://github.com/davisking/dlib.git
-cd dlib
-pip install . # or python setup.py install
+pip install git+https://github.com/davisking/dlib.git
 pip install face_recognition
 ```
 
