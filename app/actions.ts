@@ -124,14 +124,27 @@ export async function searchSpotify(query: string) {
     }
 
     const data = await searchResponse.json();
-    return data.tracks.items.map((track: any) => ({
+    return data.tracks.items.map((track: SpotifyTrack) => ({
       id: track.id,
       name: track.name,
-      artists: track.artists.map((artist: any) => ({ name: artist.name })),
+      artists: track.artists.map((artist: SpotifyArtist) => ({
+        name: artist.name,
+      })),
       preview_url: track.preview_url,
     }));
   } catch (error) {
     console.error("Error searching Spotify:", error);
     throw new Error("Failed to search Spotify");
   }
+}
+
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  artists: SpotifyArtist[];
+  preview_url: string | null;
+}
+
+interface SpotifyArtist {
+  name: string;
 }
