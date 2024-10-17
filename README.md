@@ -1,5 +1,13 @@
 # Dohr
 
+## Features
+
+- Continuous photo capture (every 5 seconds)
+- AI-powered face recognition
+- Customized audio playback based on identification
+- Web interface for user registration and admin controls
+- Notification system
+
 ## Getting started
 
 ```bash
@@ -31,5 +39,13 @@ CREATE TABLE IF NOT EXISTS entrances (
     name TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+```
+
+Resetting database:
+
+```
+DROP TABLE IF EXISTS users
+DROP TABLE IF EXISTS system_state
+DROP TABLE IF EXISTS entrances
 ```
 

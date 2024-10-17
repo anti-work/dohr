@@ -1,6 +1,3 @@
-# Add an event for pausing
-pause_event = Event()
-
 # Fetch all user face encodings from the database
 with get_db_cursor() as cursor:
     cursor.execute("SELECT name, face_encoding FROM users")
@@ -116,35 +113,34 @@ def notify_admin(message):
 
 def doorbell_loop():
     while True:
-        if not pause_event.is_set():
-            frame, image_path = capture_photo()
-            if frame is not None and image_path is not None:
-                recognized_name = recognize_person(frame)
-                if recognized_name != "No one":
-                    if recognized_name != "Unknown":
-                        with get_db_cursor() as cursor:
-                            # Check if the person has entered today
-                            cursor.execute("SELECT * FROM entrances WHERE name = ? AND timestamp > ?",
-                                           (recognized_name, datetime.now() - timedelta(days=1)))
-                            if not cursor.fetchone():
-                                # If not, play audio and notify
-                                cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
-                                result = cursor.fetchone()
-                                if result:
-                                    audio_data = result[0]
-                                    play_audio(audio_data)
-                                    notify_admin(f"{recognized_name} is in the building!")
-                                    # Record the entrance
-                                    cursor.execute("INSERT INTO entrances (name) VALUES (?)", (recognized_name,))
-                            else:
-                                print(f"{recognized_name} has already entered today. Skipping notification.")
-                    else:
-                        with open("default_chime.mp3", "rb") as f:
-                            default_audio = f.read()
-                        play_audio(default_audio)
-                        notify_admin("Unknown person at the door")
+        frame, image_path = capture_photo()
+        if frame is not None and image_path is not None:
+            recognized_name = recognize_person(frame)
+            if recognized_name != "No one":
+                if recognized_name != "Unknown":
+                    with get_db_cursor() as cursor:
+                        # Check if the person has entered today
+                        cursor.execute("SELECT * FROM entrances WHERE name = ? AND timestamp > ?",
+                                       (recognized_name, datetime.now() - timedelta(days=1)))
+                        if not cursor.fetchone():
+                            # If not, play audio and notify
+                            cursor.execute("SELECT audio FROM users WHERE name = ?", (recognized_name,))
+                            result = cursor.fetchone()
+                            if result:
+                                audio_data = result[0]
+                                play_audio(audio_data)
+                                notify_admin(f"{recognized_name} is in the building!")
+                                # Record the entrance
+                                cursor.execute("INSERT INTO entrances (name) VALUES (?)", (recognized_name,))
+                        else:
+                            print(f"{recognized_name} has already entered today. Skipping notification.")
                 else:
-                    print("No one at the door")
+                    with open("default_chime.mp3", "rb") as f:
+                        default_audio = f.read()
+                    play_audio(default_audio)
+                    notify_admin("Unknown person at the door")
+            else:
+                print("No one at the door")
         time.sleep(5)
 
 # Start the doorbell loop in a separate thread
@@ -187,25 +183,3 @@ def remove_user(user_id):
             return jsonify({"message": "User removed successfully"}), 200
         else:
             return jsonify({"message": "User not found"}), 404
-
-@app.route('/toggle_pause', methods=['POST'])
-def toggle_pause():
-    with get_db_cursor() as cursor:
-        cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
-        current_state = cursor.fetchone()[0]
-        new_state = not current_state
-        cursor.execute("UPDATE system_state SET is_paused = ? WHERE id = 1", (new_state,))
-
-    if new_state:
-        pause_event.set()
-    else:
-        pause_event.clear()
-
-    return jsonify({"is_paused": new_state}), 200
-
-@app.route('/get_pause_state', methods=['GET'])
-def get_pause_state():
-    with get_db_cursor() as cursor:
-        cursor.execute("SELECT is_paused FROM system_state WHERE id = 1")
-        is_paused = cursor.fetchone()[0]
-    return jsonify({"is_paused": is_paused}), 200
