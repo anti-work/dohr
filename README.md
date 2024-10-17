@@ -22,9 +22,8 @@ npm run dev
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    audio BYTEA,
-    photo BYTEA,
-    face_encoding BYTEA
+    audio_url TEXT NOT NULL,
+    photo_url TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS system_state (

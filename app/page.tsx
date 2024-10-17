@@ -1,12 +1,45 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { getUsers, removeUser, registerUser, togglePause, getPauseState } from "./actions";
+import { useState, useEffect, useRef } from "react";
+import { type PutBlobResult } from "@vercel/blob";
+import { upload } from "@vercel/blob/client";
+import {
+  getUsers,
+  removeUser,
+  registerUser,
+  togglePause,
+  getPauseState,
+  searchSpotify,
+} from "./actions";
+
+interface User {
+  id: number;
+  name: string;
+  audio_url: string;
+  photo_url: string;
+}
+
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  preview_url: string;
+}
 
 export default function Home() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
+  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
+  const [audioUrl, setAudioUrl] = useState<string>("");
+  const [showSearchResults, setShowSearchResults] = useState(true);
+  const [photoBlob, setPhotoBlob] = useState<PutBlobResult | null>(null);
+  const inputFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -53,34 +86,80 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const photo = formData.get('photo') as File;
-    const audio = formData.get('audio') as File;
+    const name = formData.get("name") as string;
 
-    const photoBase64 = await fileToBase64(photo);
-    const audioBase64 = await fileToBase64(audio);
+    if (!audioUrl) {
+      alert("Please select a track");
+      return;
+    }
+
+    if (!photoBlob) {
+      alert("Please upload a photo");
+      return;
+    }
 
     try {
-      await registerUser(name, photoBase64, audioBase64);
+      await registerUser(name, photoBlob.url, audioUrl);
       fetchUsers();
+      setSelectedTrack(null);
+      setSearchQuery("");
+      setSearchResults([]);
+      setAudioUrl("");
+      setPhotoBlob(null);
+      if (inputFileRef.current) {
+        inputFileRef.current.value = "";
+      }
     } catch (error) {
       console.error("Error registering user:", error);
       alert("Error registering user");
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = error => reject(error);
+  const handleSearch = async () => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const newTimeout = setTimeout(async () => {
+      const results = await searchSpotify(searchQuery);
+      setSearchResults(results);
+      setShowSearchResults(true);
+    }, 300); // 300ms debounce
+
+    setSearchTimeout(newTimeout);
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    handleSearch();
+  };
+
+  const handleTrackSelect = (track: SpotifyTrack) => {
+    setSelectedTrack(track);
+    setAudioUrl(track.preview_url);
+    setShowSearchResults(false);
+  };
+
+  const handlePhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!event.target.files) {
+      throw new Error("No file selected");
+    }
+
+    const file = event.target.files[0];
+
+    const newBlob = await upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: "/api/avatar/upload",
     });
+
+    setPhotoBlob(newBlob);
   };
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Dohr Admin</h1>
+      <h1 className="text-2xl font-bold mb-4">Dohr</h1>
       <button
         onClick={handleTogglePause}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -94,7 +173,13 @@ export default function Home() {
           <label htmlFor="name" className="block">
             Name:
           </label>
-          <input type="text" id="name" name="name" required className="border p-2 w-full" />
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            className="border p-2 w-full"
+          />
         </div>
         <div>
           <label htmlFor="photo" className="block">
@@ -107,21 +192,64 @@ export default function Home() {
             accept="image/*"
             required
             className="border p-2 w-full"
+            ref={inputFileRef}
+            onChange={handlePhotoUpload}
           />
         </div>
+        {photoBlob && (
+          <div>
+            Uploaded photo: <a href={photoBlob.url}>{photoBlob.url}</a>
+          </div>
+        )}
         <div>
           <label htmlFor="audio" className="block">
             Audio:
           </label>
           <input
-            type="file"
-            id="audio"
-            name="audio"
-            accept="audio/*"
-            required
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchInputChange}
+            placeholder="Search for a song"
             className="border p-2 w-full"
           />
         </div>
+        {showSearchResults && searchResults.length > 0 && (
+          <div>
+            <h3 className="font-semibold mt-2">Search Results:</h3>
+            <ul>
+              {searchResults.map((track) => (
+                <li
+                  key={track.id}
+                  className="cursor-pointer hover:bg-gray-100 p-2"
+                  onClick={() => handleTrackSelect(track)}
+                >
+                  {track.name} - {track.artists.map((a) => a.name).join(", ")}
+                  {track.preview_url && (
+                    <audio controls className="ml-2">
+                      <source src={track.preview_url} type="audio/mpeg" />
+                    </audio>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {selectedTrack && (
+          <div>
+            <h3 className="font-semibold">Selected Track:</h3>
+            <p>
+              {selectedTrack.name} -{" "}
+              {selectedTrack.artists.map((a) => a.name).join(", ")}
+            </p>
+            {selectedTrack.preview_url && (
+              <audio controls className="mt-2">
+                <source src={selectedTrack.preview_url} type="audio/mpeg" />
+              </audio>
+            )}
+          </div>
+        )}
+        <input type="hidden" name="audio_url" value={audioUrl || ""} />
+        <input type="hidden" name="photo_url" value={photoBlob?.url || ""} />
         <button
           type="submit"
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
@@ -135,7 +263,7 @@ export default function Home() {
         {users.map((user) => (
           <li key={user.id} className="flex items-center space-x-4">
             <Image
-              src={`data:image/jpeg;base64,${user.photo}`}
+              src={user.photo_url}
               alt={user.name}
               width={50}
               height={50}
@@ -143,10 +271,7 @@ export default function Home() {
             />
             <span>{user.name}</span>
             <audio controls>
-              <source
-                src={`data:audio/mpeg;base64,${user.audio}`}
-                type="audio/mpeg"
-              />
+              <source src={user.audio_url} type="audio/mpeg" />
               Your browser does not support the audio element.
             </audio>
             <button
