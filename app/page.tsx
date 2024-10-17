@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { type PutBlobResult } from "@vercel/blob";
 import { upload } from "@vercel/blob/client";
 import {
   getUsers,
