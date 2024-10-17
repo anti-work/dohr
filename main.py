@@ -162,8 +162,6 @@ def play_audio(audio_data):
     os.remove(temp_file)
 
 def notify_admin(message):
-    print(f"Admin Notification: {message}")
-
     # Send Slack message
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
     if SLACK_WEBHOOK_URL:
@@ -225,7 +223,7 @@ def doorbell_loop():
                         play_audio(default_audio)
                         notify_admin("Unknown person at the door")
                 else:
-                    notify_admin("No one at the door")
+                    print("No one at the door")
         time.sleep(5)
 
 # Start the doorbell loop in a separate thread
