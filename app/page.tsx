@@ -39,7 +39,7 @@ export default function Home() {
   );
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
-  const [photoBlob, setPhotoBlob] = useState<PutBlobResult | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string>("");
   const inputFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function Home() {
       return;
     }
 
-    if (!photoBlob) {
+    if (!photoUrl) {
       alert("Please upload a photo");
       return;
     }
@@ -105,13 +105,13 @@ export default function Home() {
     }
 
     try {
-      await registerUser(name, photoBlob.url, audioUrl, selectedTrack.name);
+      await registerUser(name, photoUrl, audioUrl, selectedTrack.name);
       fetchUsers();
       setSelectedTrack(null);
       setSearchQuery("");
       setSearchResults([]);
       setAudioUrl("");
-      setPhotoBlob(null);
+      setPhotoUrl("");
       if (inputFileRef.current) {
         inputFileRef.current.value = "";
       }
@@ -160,7 +160,7 @@ export default function Home() {
       handleUploadUrl: "/api/avatar/upload",
     });
 
-    setPhotoBlob(newBlob);
+    setPhotoUrl(newBlob.url);
   };
 
   return (
@@ -202,9 +202,9 @@ export default function Home() {
             onChange={handlePhotoUpload}
           />
         </div>
-        {photoBlob && (
+        {photoUrl && (
           <div>
-            Uploaded photo: <a href={photoBlob.url}>{photoBlob.url}</a>
+            Uploaded photo: <a href={photoUrl}>{photoUrl}</a>
           </div>
         )}
         <div>
@@ -255,7 +255,7 @@ export default function Home() {
           </div>
         )}
         <input type="hidden" name="audio_url" value={audioUrl || ""} />
-        <input type="hidden" name="photo_url" value={photoBlob?.url || ""} />
+        <input type="hidden" name="photo_url" value={photoUrl || ""} />
         <button
           type="submit"
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
