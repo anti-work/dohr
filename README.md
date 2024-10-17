@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     audio_url TEXT NOT NULL,
-    photo_url TEXT NOT NULL
+    photo_url TEXT NOT NULL,
+    track_name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS system_state (

@@ -18,6 +18,7 @@ interface User {
   name: string;
   audio_url: string;
   photo_url: string;
+  track_name: string;
 }
 
 interface SpotifyTrack {
@@ -98,8 +99,13 @@ export default function Home() {
       return;
     }
 
+    if (!selectedTrack) {
+      alert("Please select a track");
+      return;
+    }
+
     try {
-      await registerUser(name, photoBlob.url, audioUrl);
+      await registerUser(name, photoBlob.url, audioUrl, selectedTrack.name);
       fetchUsers();
       setSelectedTrack(null);
       setSearchQuery("");
@@ -259,30 +265,48 @@ export default function Home() {
       </form>
 
       <h2 className="text-xl font-semibold mt-8 mb-4">Registered Users</h2>
-      <ul className="space-y-4">
-        {users.map((user) => (
-          <li key={user.id} className="flex items-center space-x-4">
-            <Image
-              src={user.photo_url}
-              alt={user.name}
-              width={50}
-              height={50}
-              className="rounded-full object-cover"
-            />
-            <span>{user.name}</span>
-            <audio controls>
-              <source src={user.audio_url} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-            <button
-              onClick={() => handleRemoveUser(user.id)}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 text-left">Photo</th>
+            <th className="p-2 text-left">Name</th>
+            <th className="p-2 text-left">Track</th>
+            <th className="p-2 text-left">Audio</th>
+            <th className="p-2 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id} className="border-b">
+              <td className="p-2">
+                <Image
+                  src={user.photo_url}
+                  alt={user.name}
+                  width={50}
+                  height={50}
+                  className="rounded-full object-cover"
+                />
+              </td>
+              <td className="p-2">{user.name}</td>
+              <td className="p-2 text-sm text-gray-600">{user.track_name}</td>
+              <td className="p-2">
+                <audio controls>
+                  <source src={user.audio_url} type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+              </td>
+              <td className="p-2">
+                <button
+                  onClick={() => handleRemoveUser(user.id)}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

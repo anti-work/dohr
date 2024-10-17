@@ -6,17 +6,9 @@ import { revalidatePath } from "next/cache";
 export async function getUsers() {
   try {
     const result = await sql`
-      SELECT id, name, audio_url, photo FROM users
+      SELECT id, name, audio_url, photo_url, track_name FROM users
     `;
-    console.log(result.rows);
-    // Check if result.rows is undefined or empty
-    if (!result.rows || result.rows.length === 0) {
-      return []; // Return an empty array if no users are found
-    }
-    return result.rows.map((user) => ({
-      ...user,
-      photo: user.photo ? Buffer.from(user.photo).toString("base64") : "",
-    }));
+    return result.rows;
   } catch (error) {
     console.error("Error fetching users:", error);
     throw new Error("Failed to fetch users");
@@ -36,12 +28,13 @@ export async function removeUser(userId: number) {
 export async function registerUser(
   name: string,
   photo_url: string,
-  audio_url: string
+  audio_url: string,
+  track_name: string
 ) {
   try {
     await sql`
-      INSERT INTO users (name, audio_url, photo)
-      VALUES (${name}, ${audio_url}, ${photo_url})
+      INSERT INTO users (name, audio_url, photo_url, track_name)
+      VALUES (${name}, ${audio_url}, ${photo_url}, ${track_name})
     `;
 
     revalidatePath("/");
