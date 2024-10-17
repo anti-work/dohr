@@ -50,7 +50,7 @@ export default function Home() {
   const fetchUsers = async () => {
     try {
       const data = await getUsers();
-      setUsers(data);
+      setUsers(data as User[]);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
