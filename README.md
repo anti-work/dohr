@@ -27,12 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
     track_name TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS system_state (
+CREATE TABLE IF NOT EXISTS system (
     id SERIAL PRIMARY KEY,
-    is_paused BOOLEAN NOT NULL
+    is_paused BOOLEAN NOT NULL,
+    spotify_access_token TEXT,
+    spotify_refresh_token TEXT
 );
 
-INSERT INTO system_state (id, is_paused) VALUES (1, false) ON CONFLICT (id) DO NOTHING;
+INSERT INTO system (id, is_paused) VALUES (1, false) ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS entrances (
     id SERIAL PRIMARY KEY,
@@ -45,7 +47,7 @@ Resetting database:
 
 ```
 DROP TABLE IF EXISTS users
-DROP TABLE IF EXISTS system_state
+DROP TABLE IF EXISTS system
 DROP TABLE IF EXISTS entrances
 ```
 

@@ -15,6 +15,8 @@ import {
   getEntrances,
   registerEntrance,
   addToQueue,
+  removeEntrance,
+  getSpotifyAuthUrl,
 } from "./actions";
 
 interface User {
@@ -26,6 +28,7 @@ interface User {
 }
 
 interface Entrance {
+  id: number;
   name: string;
   timestamp: string;
 }
@@ -57,7 +60,7 @@ export default function Home() {
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [logs, setLogs] = useState<Log[]>([]);
   const [entrances, setEntrances] = useState<
-    { name: string; timestamp: string }[]
+    { name: string; timestamp: string; id: number }[]
   >([]);
   const inputFileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -357,14 +360,35 @@ export default function Home() {
     }
   };
 
+  const handleRemoveEntrance = async (id: number) => {
+    try {
+      await removeEntrance(id);
+      fetchEntrances(); // Refresh the entrances list
+    } catch (error) {
+      console.error("Error removing entrance:", error);
+      alert("Error removing entrance");
+    }
+  };
+
+  const handleSpotifyAuth = async () => {
+    const authUrl = await getSpotifyAuthUrl();
+    window.location.href = authUrl;
+  };
+
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Dohr</h1>
       <button
         onClick={handleTogglePause}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
       >
         {isPaused ? "Unpause" : "Pause"}
+      </button>
+      <button
+        onClick={handleSpotifyAuth}
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Connect Spotify
       </button>
 
       <div className="relative">
@@ -528,14 +552,23 @@ export default function Home() {
           <tr className="bg-gray-100">
             <th className="p-2 text-left">Name</th>
             <th className="p-2 text-left">Timestamp</th>
+            <th className="p-2 text-left">Action</th>
           </tr>
         </thead>
         <tbody>
-          {entrances.map((entrance, index) => (
-            <tr key={index} className="border-b">
+          {entrances.map((entrance) => (
+            <tr key={entrance.id} className="border-b">
               <td className="p-2">{entrance.name}</td>
               <td className="p-2">
                 {new Date(entrance.timestamp).toLocaleString()}
+              </td>
+              <td className="p-2">
+                <button
+                  onClick={() => handleRemoveEntrance(entrance.id)}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                >
+                  Remove
+                </button>
               </td>
             </tr>
           ))}
