@@ -26,8 +26,6 @@ export async function removeUser(userId: number) {
 }
 
 export async function notifyAdmin(message: string) {
-  return;
-
   const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
   const TELEGRAM_API_TOKEN = process.env.TELEGRAM_API_TOKEN;
   const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
