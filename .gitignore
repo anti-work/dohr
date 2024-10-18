@@ -1,26 +1,36 @@
-# Environments
-.env
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# Database
-*.db
+# testing
+/coverage
 
-# Dlib (I needed to setup locally, but ideally not needed in the repo)
-dlib/
+# next.js
+/.next/
+/out/
 
-# Captured images
-*.jpg
+# production
+/build
 
-# OS generated files
+# misc
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

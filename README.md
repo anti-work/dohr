@@ -1,35 +1,54 @@
 # Dohr
 
-This project implements an AI-powered doorbell system using a camera and speaker.
-
 ## Features
 
 - Continuous photo capture (every 5 seconds)
 - AI-powered face recognition
 - Customized audio playback based on identification
 - Web interface for user registration and admin controls
-- Basic notification system
+- Notification system
 
-## Installation
+## Getting started
 
-1. Install the required packages:
+```bash
+npm i
+vercel env pull .env.development.local
+npm run dev
+```
 
-   ```
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. Run the main script:
-
-    ```
-    python main.py
-    ```
-
-## Resetting the Database
-
-If you need to reset the database and start fresh, you can use the `reset.py` script:
+## Setting up database
 
 ```
-python reset.py
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    audio_uri TEXT NOT NULL,
+    photo_url TEXT NOT NULL,
+    track_name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS system (
+    id SERIAL PRIMARY KEY,
+    is_paused BOOLEAN NOT NULL,
+    spotify_access_token TEXT,
+    spotify_refresh_token TEXT,
+    spotify_token_expiry BIGINT
+);
+
+INSERT INTO system (id, is_paused) VALUES (1, false) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS entrances (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
+
+Resetting database:
+
+```
+DROP TABLE IF EXISTS users
+DROP TABLE IF EXISTS system
+DROP TABLE IF EXISTS entrances
+```
+
