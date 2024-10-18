@@ -79,38 +79,6 @@ def play_audio(audio_data):
     pygame.mixer.music.play()
     os.remove(temp_file)
 
-def notify_admin(message):
-    # Send Slack message
-    SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
-    if SLACK_WEBHOOK_URL:
-        payload = {"text": message}
-        try:
-            response = requests.post(SLACK_WEBHOOK_URL, json=payload)
-            response.raise_for_status()
-            print(f"Slack notification sent: {message}")
-        except requests.RequestException as e:
-            print(f"Failed to send Slack notification: {e}")
-    else:
-        print("Slack webhook URL not set. Skipping Slack notification.")
-
-    # Send Telegram message
-    TELEGRAM_API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
-    TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-    if TELEGRAM_API_TOKEN and TELEGRAM_CHAT_ID:
-        telegram_url = f"https://api.telegram.org/bot{TELEGRAM_API_TOKEN}/sendMessage"
-        telegram_payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message
-        }
-        try:
-            response = requests.post(telegram_url, json=telegram_payload)
-            response.raise_for_status()
-            print(f"Telegram notification sent: {message}")
-        except requests.RequestException as e:
-            print(f"Failed to send Telegram notification: {e}")
-    else:
-        print("Telegram API token or chat ID not set. Skipping Telegram notification.")
-
 def doorbell_loop():
     while True:
         frame, image_path = capture_photo()

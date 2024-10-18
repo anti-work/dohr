@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { upload } from "@vercel/blob/client";
+import * as faceapi from "face-api.js";
 import {
   getUsers,
   removeUser,
@@ -10,6 +11,7 @@ import {
   togglePause,
   getPauseState,
   searchSpotify,
+  notifyAdmin,
 } from "./actions";
 
 interface User {
@@ -27,6 +29,11 @@ interface SpotifyTrack {
   preview_url: string;
 }
 
+interface Log {
+  timestamp: string;
+  message: string;
+}
+
 export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [isPaused, setIsPaused] = useState(false);
@@ -39,12 +46,143 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [logs, setLogs] = useState<Log[]>([]);
   const inputFileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
 
   useEffect(() => {
     fetchUsers();
     fetchPauseState();
+    loadFaceMatcher();
+    startVideo();
   }, []);
+
+  const loadFaceMatcher = async () => {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
+    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+    await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
+
+    const labeledDescriptors = await Promise.all(
+      users.map(async (user) => {
+        const img = await faceapi.fetchImage(user.photo_url);
+        const detection = await faceapi
+          .detectSingleFace(img)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        return new faceapi.LabeledFaceDescriptors(
+          user.name,
+          detection ? [detection.descriptor] : []
+        );
+      })
+    );
+
+    if (labeledDescriptors.length > 0) {
+      faceMatcher.current = new faceapi.FaceMatcher(labeledDescriptors);
+    }
+  };
+
+  const startVideo = () => {
+    navigator.mediaDevices
+      .getUserMedia({ video: {} })
+      .then((stream) => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch((err) => console.error(err));
+  };
+
+  const addLog = (message: string) => {
+    const newLog: Log = {
+      timestamp: new Date().toLocaleString(),
+      message: message,
+    };
+    setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 10)); // Keep only the last 10 logs
+  };
+
+  useEffect(() => {
+    if (videoRef.current && canvasRef.current) {
+      videoRef.current.addEventListener("play", () => {
+        const displaySize = {
+          width: videoRef.current!.width,
+          height: videoRef.current!.height,
+        };
+        faceapi.matchDimensions(canvasRef.current!, displaySize);
+
+        setInterval(async () => {
+          if (isPaused) return;
+
+          const detections = await faceapi
+            .detectAllFaces(videoRef.current!)
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+          console.log(detections);
+
+          const resizedDetections = faceapi.resizeResults(
+            detections,
+            displaySize
+          );
+          console.log(resizedDetections);
+
+          if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext("2d");
+            if (ctx) {
+              ctx.clearRect(
+                0,
+                0,
+                canvasRef.current.width,
+                canvasRef.current.height
+              );
+              faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
+
+              resizedDetections.forEach((detection) => {
+                if (faceMatcher.current) {
+                  const bestMatch = faceMatcher.current.findBestMatch(
+                    detection.descriptor
+                  );
+                  const box = detection.detection.box;
+                  const drawOptions = {
+                    label: bestMatch.toString(),
+                    lineWidth: 2,
+                    boxColor: "blue",
+                    drawLabelOptions: {
+                      anchorPosition: faceapi.draw.AnchorPosition.BOTTOM_LEFT,
+                      backgroundColor: "rgba(0, 0, 255, 0.5)",
+                    },
+                  };
+                  new faceapi.draw.DrawBox(box, drawOptions).draw(ctx);
+
+                  if (bestMatch.distance < 0.6) {
+                    const matchedUser = users.find(
+                      (user) => user.name === bestMatch.label
+                    );
+                    if (matchedUser) {
+                      const audio = new Audio(matchedUser.audio_url);
+                      audio.play();
+                      const message = `${matchedUser.name} is in the building!`;
+                      console.log(message);
+                      notifyAdmin(message);
+                      addLog(message);
+                    }
+                  } else {
+                    const audio = new Audio("/default_chime.mp3");
+                    audio.play();
+                    const message = "Unknown person at the door";
+                    console.log(message);
+                    notifyAdmin(message);
+                    addLog(message);
+                  }
+                }
+              });
+            }
+          }
+        }, 300);
+      });
+    }
+  }, [users, isPaused]);
 
   const fetchUsers = async () => {
     try {
@@ -104,15 +242,24 @@ export default function Home() {
     }
 
     try {
-      await registerUser(name, photoUrl, audioUrl, selectedTrack.name);
-      fetchUsers();
-      setSelectedTrack(null);
-      setSearchQuery("");
-      setSearchResults([]);
-      setAudioUrl("");
-      setPhotoUrl("");
-      if (inputFileRef.current) {
-        inputFileRef.current.value = "";
+      const img = await faceapi.fetchImage(photoUrl);
+      const detection = await faceapi
+        .detectSingleFace(img)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      if (detection) {
+        await registerUser(name, photoUrl, audioUrl, selectedTrack.name);
+        fetchUsers();
+        setSelectedTrack(null);
+        setSearchQuery("");
+        setSearchResults([]);
+        setAudioUrl("");
+        setPhotoUrl("");
+        if (inputFileRef.current) {
+          inputFileRef.current.value = "";
+        }
+      } else {
+        alert("No face detected in the uploaded photo");
       }
     } catch (error) {
       console.error("Error registering user:", error);
@@ -171,6 +318,16 @@ export default function Home() {
       >
         {isPaused ? "Unpause" : "Pause"}
       </button>
+
+      <div className="relative">
+        <video ref={videoRef} width="720" height="560" autoPlay muted></video>
+        <canvas
+          ref={canvasRef}
+          width="720"
+          height="560"
+          className="absolute top-0 left-0"
+        ></canvas>
+      </div>
 
       <h2 className="text-xl font-semibold mt-8 mb-4">Register New User</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -302,6 +459,24 @@ export default function Home() {
                   Remove
                 </button>
               </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 className="text-xl font-semibold mt-8 mb-4">Logs</h2>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 text-left">Timestamp</th>
+            <th className="p-2 text-left">Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.map((log, index) => (
+            <tr key={index} className="border-b">
+              <td className="p-2">{log.timestamp}</td>
+              <td className="p-2">{log.message}</td>
             </tr>
           ))}
         </tbody>

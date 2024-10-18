@@ -25,6 +25,66 @@ export async function removeUser(userId: number) {
   }
 }
 
+export async function notifyAdmin(message: string) {
+  const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+  const TELEGRAM_API_TOKEN = process.env.TELEGRAM_API_TOKEN;
+  const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+  // Send Slack message
+  if (SLACK_WEBHOOK_URL) {
+    try {
+      const response = await fetch(SLACK_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: message }),
+      });
+      if (response.ok) {
+        console.log(`Slack notification sent: ${message}`);
+      } else {
+        console.error(
+          `Failed to send Slack notification: ${response.statusText}`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to send Slack notification:", error);
+    }
+  } else {
+    console.log("Slack webhook URL not set. Skipping Slack notification.");
+  }
+
+  // Send Telegram message
+  if (TELEGRAM_API_TOKEN && TELEGRAM_CHAT_ID) {
+    const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_API_TOKEN}/sendMessage`;
+    try {
+      const response = await fetch(telegramUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+        }),
+      });
+      if (response.ok) {
+        console.log(`Telegram notification sent: ${message}`);
+      } else {
+        console.error(
+          `Failed to send Telegram notification: ${response.statusText}`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to send Telegram notification:", error);
+    }
+  } else {
+    console.log(
+      "Telegram API token or chat ID not set. Skipping Telegram notification."
+    );
+  }
+}
+
 export async function registerUser(
   name: string,
   photo_url: string,
@@ -36,6 +96,9 @@ export async function registerUser(
       INSERT INTO users (name, audio_url, photo_url, track_name)
       VALUES (${name}, ${audio_url}, ${photo_url}, ${track_name})
     `;
+
+    // Notify admin when a new user is registered
+    await notify_admin(`${name} is in the building!`);
 
     revalidatePath("/");
   } catch (error) {
