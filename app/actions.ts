@@ -241,20 +241,18 @@ export async function registerEntrance(name: string) {
 export async function addToQueue(trackUri: string) {
   try {
     const result = await sql`
-      SELECT spotify_access_token, spotify_refresh_token FROM system WHERE id = 1
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM system WHERE id = 1
     `;
     let accessToken = result.rows[0].spotify_access_token;
     const refreshToken = result.rows[0].spotify_refresh_token;
-
-    console.log("accessToken", accessToken);
-    console.log("refreshToken", refreshToken);
+    const tokenExpiry = result.rows[0].spotify_token_expiry;
 
     if (!accessToken || !refreshToken) {
       throw new Error("No Spotify tokens found");
     }
 
-    // TODO: Check if the access token is expired and refresh if necessary
-    if (false) {
+    // Check if the access token is expired and refresh if necessary
+    if (Date.now() > tokenExpiry) {
       const newTokens = await refreshAccessToken(refreshToken);
       accessToken = newTokens.access_token;
     }
@@ -272,6 +270,7 @@ export async function addToQueue(trackUri: string) {
     );
 
     if (!queueResponse.ok) {
+      console.log(queueResponse);
       throw new Error("Failed to add track to Spotify queue");
     }
 
@@ -376,7 +375,8 @@ export async function exchangeCodeForTokens(code: string) {
   await sql`
     UPDATE system
     SET spotify_access_token = ${data.access_token},
-        spotify_refresh_token = ${data.refresh_token}
+        spotify_refresh_token = ${data.refresh_token},
+        spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
     WHERE id = 1
   `;
 
@@ -411,10 +411,7 @@ export async function refreshAccessToken(refresh_token: string) {
   await sql`
     UPDATE system
     SET spotify_access_token = ${data.access_token},
-        spotify_token_expiry = ${(
-          Date.now() +
-          data.expires_in * 1000
-        ).toString()}
+        spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
     WHERE id = 1
   `;
 

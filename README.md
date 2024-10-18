@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS system (
     id SERIAL PRIMARY KEY,
     is_paused BOOLEAN NOT NULL,
     spotify_access_token TEXT,
-    spotify_refresh_token TEXT
+    spotify_refresh_token TEXT,
+    spotify_token_expiry BIGINT
 );
 
 INSERT INTO system (id, is_paused) VALUES (1, false) ON CONFLICT (id) DO NOTHING;

@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
       await sql`
         UPDATE system
         SET spotify_access_token = ${data.access_token},
-            spotify_refresh_token = ${data.refresh_token}
+            spotify_refresh_token = ${data.refresh_token},
+            spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
         WHERE id = 1
       `;
 

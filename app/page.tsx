@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { upload } from "@vercel/blob/client";
 import * as faceapi from "face-api.js";
 import {
@@ -18,6 +19,14 @@ import {
   removeEntrance,
   getSpotifyAuthUrl,
 } from "./actions";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface User {
   id: number;
@@ -41,11 +50,6 @@ interface SpotifyTrack {
   uri: string;
 }
 
-interface Log {
-  timestamp: string;
-  message: string;
-}
-
 export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [isPaused, setIsPaused] = useState(false);
@@ -58,7 +62,6 @@ export default function Home() {
   const [audioUri, setAudioUri] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string>("");
-  const [logs, setLogs] = useState<Log[]>([]);
   const [entrances, setEntrances] = useState<
     { name: string; timestamp: string; id: number }[]
   >([]);
@@ -74,7 +77,18 @@ export default function Home() {
     startVideo();
   }, []);
 
-  const loadFaceMatcher = async () => {
+  const debounce = useMemo(
+    () => (func: Function, delay: number) => {
+      let timeoutId: NodeJS.Timeout;
+      return (...args: any[]) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func(...args), delay);
+      };
+    },
+    []
+  );
+
+  const loadFaceMatcher = useCallback(async () => {
     await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
     await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
     await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
@@ -96,7 +110,7 @@ export default function Home() {
     if (labeledDescriptors.length > 0) {
       faceMatcher.current = new faceapi.FaceMatcher(labeledDescriptors);
     }
-  };
+  }, [users]);
 
   const startVideo = () => {
     navigator.mediaDevices
@@ -107,14 +121,6 @@ export default function Home() {
         }
       })
       .catch((err) => console.error(err));
-  };
-
-  const addLog = (message: string) => {
-    const newLog: Log = {
-      timestamp: new Date().toISOString(),
-      message: message,
-    };
-    setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 10)); // Keep only the last 10 logs
   };
 
   useEffect(() => {
@@ -182,7 +188,6 @@ export default function Home() {
                         await addToQueue(matchedUser.audio_uri);
                         const message = `${matchedUser.name} is in the building!`;
                         notifyAdmin(message);
-                        addLog(message);
                         fetchEntrances(); // Refresh the entrances list
                       } else {
                         console.log(
@@ -191,9 +196,13 @@ export default function Home() {
                       }
                     }
                   } else {
-                    const audio = new Audio("/default_chime.mp3");
-                    audio.play();
-                    console.log("Unknown person at the door");
+                    const playUnknownPersonChime = debounce(() => {
+                      const audio = new Audio("/default_chime.mp3");
+                      audio.play();
+                      console.log("Unknown person at the door");
+                    }, 60000); // 60000 ms = 1 minute
+
+                    playUnknownPersonChime();
                   }
                 }
               }
@@ -202,7 +211,7 @@ export default function Home() {
         }, 300);
       });
     }
-  }, [users, isPaused]);
+  }, [users, isPaused, debounce, loadFaceMatcher]);
 
   const fetchUsers = async () => {
     try {
@@ -378,18 +387,18 @@ export default function Home() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Dohr</h1>
-      <button
+      <Button
         onClick={handleTogglePause}
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
       >
         {isPaused ? "Unpause" : "Pause"}
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={handleSpotifyAuth}
         className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
       >
         Connect Spotify
-      </button>
+      </Button>
 
       <div className="relative">
         <video ref={videoRef} width="720" height="560" autoPlay muted></video>
@@ -428,13 +437,13 @@ export default function Home() {
             ref={inputFileRef}
             onChange={handlePhotoUpload}
           />
-          <button
+          <Button
             type="button"
             onClick={handleCapturePhoto}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2"
           >
             Capture Photo
-          </button>
+          </Button>
         </div>
         {photoUrl && (
           <div>
@@ -481,99 +490,80 @@ export default function Home() {
         )}
         <input type="hidden" name="audio_uri" value={audioUri || ""} />
         <input type="hidden" name="photo_url" value={photoUrl || ""} />
-        <button
+        <Button
           type="submit"
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
         >
           Register
-        </button>
+        </Button>
       </form>
 
       <h2 className="text-xl font-semibold mt-8 mb-4">Registered Users</h2>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Photo</th>
-            <th className="p-2 text-left">Name</th>
-            <th className="p-2 text-left">Track</th>
-            <th className="p-2 text-left">Action</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Photo</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Track</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {users.map((user) => (
-            <tr key={user.id} className="border-b">
-              <td className="p-2">
-                <Image
-                  src={user.photo_url}
-                  alt={user.name}
-                  width={50}
-                  height={50}
-                  className="rounded-full object-cover"
-                />
-              </td>
-              <td className="p-2">{user.name}</td>
-              <td className="p-2 text-sm text-gray-600">{user.track_name}</td>
-              <td className="p-2">
-                <button
+            <TableRow key={user.id}>
+              <TableCell>
+                <Avatar>
+                  <AvatarImage src={user.photo_url} alt={user.name} />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </TableCell>
+              <TableCell>{user.name}</TableCell>
+              <TableCell className="text-sm text-gray-600">
+                {user.track_name}
+              </TableCell>
+              <TableCell>
+                <Button
                   onClick={() => handleRemoveUser(user.id)}
                   className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
                 >
                   Remove
-                </button>
-              </td>
-            </tr>
+                </Button>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-
-      <h2 className="text-xl font-semibold mt-8 mb-4">Logs</h2>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Timestamp</th>
-            <th className="p-2 text-left">Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.map((log, index) => (
-            <tr key={index} className="border-b">
-              <td className="p-2">{log.timestamp}</td>
-              <td className="p-2">{log.message}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
 
       <h2 className="text-xl font-semibold mt-8 mb-4">
         Today&apos;s Entrances
       </h2>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Name</th>
-            <th className="p-2 text-left">Timestamp</th>
-            <th className="p-2 text-left">Action</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Timestamp</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {entrances.map((entrance) => (
-            <tr key={entrance.id} className="border-b">
-              <td className="p-2">{entrance.name}</td>
-              <td className="p-2">
+            <TableRow key={entrance.id}>
+              <TableCell>{entrance.name}</TableCell>
+              <TableCell>
                 {new Date(entrance.timestamp).toLocaleString()}
-              </td>
-              <td className="p-2">
-                <button
+              </TableCell>
+              <TableCell>
+                <Button
                   onClick={() => handleRemoveEntrance(entrance.id)}
                   className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
                 >
                   Remove
-                </button>
-              </td>
-            </tr>
+                </Button>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
