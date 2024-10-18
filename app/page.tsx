@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { upload } from "@vercel/blob/client";
@@ -76,17 +76,6 @@ export default function Home() {
     fetchEntrances();
     startVideo();
   }, []);
-
-  const debounce = useMemo(
-    () => (func: Function, delay: number) => {
-      let timeoutId: NodeJS.Timeout;
-      return (...args: any[]) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
-      };
-    },
-    []
-  );
 
   const loadFaceMatcher = useCallback(async () => {
     await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
@@ -196,13 +185,9 @@ export default function Home() {
                       }
                     }
                   } else {
-                    const playUnknownPersonChime = debounce(() => {
-                      const audio = new Audio("/default_chime.mp3");
-                      audio.play();
-                      console.log("Unknown person at the door");
-                    }, 60000); // 60000 ms = 1 minute
-
-                    playUnknownPersonChime();
+                    const audio = new Audio("/default_chime.mp3");
+                    audio.play();
+                    console.log("Unknown person at the door");
                   }
                 }
               }
@@ -211,7 +196,7 @@ export default function Home() {
         }, 300);
       });
     }
-  }, [users, isPaused, debounce, loadFaceMatcher]);
+  }, [users, isPaused, loadFaceMatcher]);
 
   const fetchUsers = async () => {
     try {
