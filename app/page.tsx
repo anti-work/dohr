@@ -12,6 +12,8 @@ import {
   getPauseState,
   searchSpotify,
   notifyAdmin,
+  getEntrances,
+  registerEntrance,
 } from "./actions";
 
 interface User {
@@ -20,6 +22,11 @@ interface User {
   audio_url: string;
   photo_url: string;
   track_name: string;
+}
+
+interface Entrance {
+  name: string;
+  timestamp: string;
 }
 
 interface SpotifyTrack {
@@ -47,6 +54,9 @@ export default function Home() {
   const [showSearchResults, setShowSearchResults] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [logs, setLogs] = useState<Log[]>([]);
+  const [entrances, setEntrances] = useState<
+    { name: string; timestamp: string }[]
+  >([]);
   const inputFileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,7 +65,7 @@ export default function Home() {
   useEffect(() => {
     fetchUsers();
     fetchPauseState();
-    loadFaceMatcher();
+    fetchEntrances();
     startVideo();
   }, []);
 
@@ -105,6 +115,8 @@ export default function Home() {
   useEffect(() => {
     if (videoRef.current && canvasRef.current) {
       videoRef.current.addEventListener("play", () => {
+        loadFaceMatcher();
+
         const displaySize = {
           width: videoRef.current!.width,
           height: videoRef.current!.height,
@@ -119,13 +131,10 @@ export default function Home() {
             .withFaceLandmarks()
             .withFaceDescriptors();
 
-          console.log(detections);
-
           const resizedDetections = faceapi.resizeResults(
             detections,
             displaySize
           );
-          console.log(resizedDetections);
 
           if (canvasRef.current) {
             const ctx = canvasRef.current.getContext("2d");
@@ -138,7 +147,7 @@ export default function Home() {
               );
               faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
 
-              resizedDetections.forEach((detection) => {
+              for (const detection of resizedDetections) {
                 if (faceMatcher.current) {
                   const bestMatch = faceMatcher.current.findBestMatch(
                     detection.descriptor
@@ -160,23 +169,29 @@ export default function Home() {
                       (user) => user.name === bestMatch.label
                     );
                     if (matchedUser) {
-                      const audio = new Audio(matchedUser.audio_url);
-                      audio.play();
-                      const message = `${matchedUser.name} is in the building!`;
-                      console.log(message);
-                      notifyAdmin(message);
-                      addLog(message);
+                      const isNewEntry = await registerEntrance(
+                        matchedUser.name
+                      );
+                      if (isNewEntry) {
+                        const audio = new Audio(matchedUser.audio_url);
+                        audio.play();
+                        const message = `${matchedUser.name} is in the building!`;
+                        notifyAdmin(message);
+                        addLog(message);
+                        fetchEntrances(); // Refresh the entrances list
+                      } else {
+                        console.log(
+                          `${matchedUser.name} has already entered today. Skipping notification.`
+                        );
+                      }
                     }
                   } else {
                     const audio = new Audio("/default_chime.mp3");
                     audio.play();
-                    const message = "Unknown person at the door";
-                    console.log(message);
-                    notifyAdmin(message);
-                    addLog(message);
+                    console.log("Unknown person at the door");
                   }
                 }
-              });
+              }
             }
           }
         }, 300);
@@ -307,6 +322,15 @@ export default function Home() {
     });
 
     setPhotoUrl(newBlob.url);
+  };
+
+  const fetchEntrances = async () => {
+    try {
+      const data = await getEntrances();
+      setEntrances(data as Entrance[]);
+    } catch (error) {
+      console.error("Error fetching entrances:", error);
+    }
   };
 
   return (
@@ -477,6 +501,28 @@ export default function Home() {
             <tr key={index} className="border-b">
               <td className="p-2">{log.timestamp}</td>
               <td className="p-2">{log.message}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 className="text-xl font-semibold mt-8 mb-4">
+        Today&apos;s Entrances
+      </h2>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 text-left">Name</th>
+            <th className="p-2 text-left">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entrances.map((entrance, index) => (
+            <tr key={index} className="border-b">
+              <td className="p-2">{entrance.name}</td>
+              <td className="p-2">
+                {new Date(entrance.timestamp).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>

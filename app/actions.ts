@@ -97,9 +97,6 @@ export async function registerUser(
       VALUES (${name}, ${audio_url}, ${photo_url}, ${track_name})
     `;
 
-    // Notify admin when a new user is registered
-    await notify_admin(`${name} is in the building!`);
-
     revalidatePath("/");
   } catch (error) {
     console.error("Error registering user:", error);
@@ -203,4 +200,41 @@ interface SpotifyTrack {
 
 interface SpotifyArtist {
   name: string;
+}
+
+export async function getEntrances() {
+  try {
+    const result = await sql`
+      SELECT name, timestamp FROM entrances
+      WHERE timestamp > NOW() - INTERVAL '1 day'
+      ORDER BY timestamp DESC
+    `;
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching entrances:", error);
+    throw new Error("Failed to fetch entrances");
+  }
+}
+
+export async function registerEntrance(name: string) {
+  try {
+    // Check if the person has entered today
+    const existingEntry = await sql`
+      SELECT * FROM entrances
+      WHERE name = ${name} AND timestamp > NOW() - INTERVAL '1 day'
+    `;
+
+    if (existingEntry.rowCount === 0) {
+      // If not, record the entrance
+      await sql`
+        INSERT INTO entrances (name) VALUES (${name})
+      `;
+      return true; // Indicate that this is a new entry
+    }
+
+    return false; // Indicate that this person has already entered today
+  } catch (error) {
+    console.error("Error registering entrance:", error);
+    throw new Error("Failed to register entrance");
+  }
 }
