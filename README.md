@@ -22,7 +22,7 @@ npm run dev
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    audio_url TEXT NOT NULL,
+    audio_uri TEXT NOT NULL,
     photo_url TEXT NOT NULL,
     track_name TEXT NOT NULL
 );

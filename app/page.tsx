@@ -14,12 +14,13 @@ import {
   notifyAdmin,
   getEntrances,
   registerEntrance,
+  addToQueue,
 } from "./actions";
 
 interface User {
   id: number;
   name: string;
-  audio_url: string;
+  audio_uri: string;
   photo_url: string;
   track_name: string;
 }
@@ -34,6 +35,7 @@ interface SpotifyTrack {
   name: string;
   artists: { name: string }[];
   preview_url: string;
+  uri: string;
 }
 
 interface Log {
@@ -50,7 +52,7 @@ export default function Home() {
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
   );
-  const [audioUrl, setAudioUrl] = useState<string>("");
+  const [audioUri, setAudioUri] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [logs, setLogs] = useState<Log[]>([]);
@@ -106,7 +108,7 @@ export default function Home() {
 
   const addLog = (message: string) => {
     const newLog: Log = {
-      timestamp: new Date().toLocaleString(),
+      timestamp: new Date().toISOString(),
       message: message,
     };
     setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 10)); // Keep only the last 10 logs
@@ -173,8 +175,8 @@ export default function Home() {
                         matchedUser.name
                       );
                       if (isNewEntry) {
-                        const audio = new Audio(matchedUser.audio_url);
-                        audio.play();
+                        // Add the user's track to the Spotify queue
+                        await addToQueue(matchedUser.audio_uri);
                         const message = `${matchedUser.name} is in the building!`;
                         notifyAdmin(message);
                         addLog(message);
@@ -241,7 +243,7 @@ export default function Home() {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
 
-    if (!audioUrl) {
+    if (!audioUri) {
       alert("Please select a track");
       return;
     }
@@ -263,12 +265,12 @@ export default function Home() {
         .withFaceLandmarks()
         .withFaceDescriptor();
       if (detection) {
-        await registerUser(name, photoUrl, audioUrl, selectedTrack.name);
+        await registerUser(name, photoUrl, audioUri, selectedTrack.name);
         fetchUsers();
         setSelectedTrack(null);
         setSearchQuery("");
         setSearchResults([]);
-        setAudioUrl("");
+        setAudioUri("");
         setPhotoUrl("");
         if (inputFileRef.current) {
           inputFileRef.current.value = "";
@@ -303,7 +305,7 @@ export default function Home() {
 
   const handleTrackSelect = (track: SpotifyTrack) => {
     setSelectedTrack(track);
-    setAudioUrl(track.preview_url);
+    setAudioUri(track.uri);
     setShowSearchResults(false);
   };
 
@@ -322,6 +324,28 @@ export default function Home() {
     });
 
     setPhotoUrl(newBlob.url);
+  };
+
+  const handleCapturePhoto = async () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], "captured_photo.jpg", {
+            type: "image/jpeg",
+          });
+          const newBlob = await upload(file.name, file, {
+            access: "public",
+            handleUploadUrl: "/api/avatar/upload",
+          });
+          setPhotoUrl(newBlob.url);
+        }
+      }, "image/jpeg");
+    }
   };
 
   const fetchEntrances = async () => {
@@ -376,11 +400,17 @@ export default function Home() {
             id="photo"
             name="photo"
             accept="image/*"
-            required
             className="border p-2 w-full"
             ref={inputFileRef}
             onChange={handlePhotoUpload}
           />
+          <button
+            type="button"
+            onClick={handleCapturePhoto}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2"
+          >
+            Capture Photo
+          </button>
         </div>
         {photoUrl && (
           <div>
@@ -410,11 +440,6 @@ export default function Home() {
                   onClick={() => handleTrackSelect(track)}
                 >
                   {track.name} - {track.artists.map((a) => a.name).join(", ")}
-                  {track.preview_url && (
-                    <audio controls className="ml-2">
-                      <source src={track.preview_url} type="audio/mpeg" />
-                    </audio>
-                  )}
                 </li>
               ))}
             </ul>
@@ -427,14 +452,10 @@ export default function Home() {
               {selectedTrack.name} -{" "}
               {selectedTrack.artists.map((a) => a.name).join(", ")}
             </p>
-            {selectedTrack.preview_url && (
-              <audio controls className="mt-2">
-                <source src={selectedTrack.preview_url} type="audio/mpeg" />
-              </audio>
-            )}
+            <p>{selectedTrack.uri}</p>
           </div>
         )}
-        <input type="hidden" name="audio_url" value={audioUrl || ""} />
+        <input type="hidden" name="audio_uri" value={audioUri || ""} />
         <input type="hidden" name="photo_url" value={photoUrl || ""} />
         <button
           type="submit"
@@ -451,7 +472,6 @@ export default function Home() {
             <th className="p-2 text-left">Photo</th>
             <th className="p-2 text-left">Name</th>
             <th className="p-2 text-left">Track</th>
-            <th className="p-2 text-left">Audio</th>
             <th className="p-2 text-left">Action</th>
           </tr>
         </thead>
@@ -469,12 +489,6 @@ export default function Home() {
               </td>
               <td className="p-2">{user.name}</td>
               <td className="p-2 text-sm text-gray-600">{user.track_name}</td>
-              <td className="p-2">
-                <audio controls>
-                  <source src={user.audio_url} type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-              </td>
               <td className="p-2">
                 <button
                   onClick={() => handleRemoveUser(user.id)}

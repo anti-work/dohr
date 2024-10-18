@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function getUsers() {
   try {
     const result = await sql`
-      SELECT id, name, audio_url, photo_url, track_name FROM users
+      SELECT id, name, audio_uri, photo_url, track_name FROM users
     `;
     return result.rows;
   } catch (error) {
@@ -88,13 +88,13 @@ export async function notifyAdmin(message: string) {
 export async function registerUser(
   name: string,
   photo_url: string,
-  audio_url: string,
+  audio_uri: string,
   track_name: string
 ) {
   try {
     await sql`
-      INSERT INTO users (name, audio_url, photo_url, track_name)
-      VALUES (${name}, ${audio_url}, ${photo_url}, ${track_name})
+      INSERT INTO users (name, audio_uri, photo_url, track_name)
+      VALUES (${name}, ${audio_uri}, ${photo_url}, ${track_name})
     `;
 
     revalidatePath("/");
@@ -184,6 +184,7 @@ export async function searchSpotify(query: string) {
         name: artist.name,
       })),
       preview_url: track.preview_url,
+      uri: track.uri,
     }));
   } catch (error) {
     console.error("Error searching Spotify:", error);
@@ -196,6 +197,7 @@ interface SpotifyTrack {
   name: string;
   artists: SpotifyArtist[];
   preview_url: string | null;
+  uri: string;
 }
 
 interface SpotifyArtist {
@@ -236,5 +238,58 @@ export async function registerEntrance(name: string) {
   } catch (error) {
     console.error("Error registering entrance:", error);
     throw new Error("Failed to register entrance");
+  }
+}
+
+export async function addToQueue(trackUri: string) {
+  try {
+    const client_id = process.env.SPOTIFY_CLIENT_ID;
+    const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
+
+    // First, get the access token using the refresh token
+    const tokenResponse = await fetch(
+      "https://accounts.spotify.com/api/token",
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(client_id + ":" + client_secret).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+        }),
+      }
+    );
+
+    if (!tokenResponse.ok) {
+      throw new Error("Failed to obtain Spotify access token");
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Now use the access token to add the track to the queue
+    const queueResponse = await fetch(
+      `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(
+        trackUri
+      )}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!queueResponse.ok) {
+      throw new Error("Failed to add track to Spotify queue");
+    }
+
+    console.log(`Track ${trackUri} added to queue successfully`);
+  } catch (error) {
+    console.error("Error adding track to Spotify queue:", error);
+    throw new Error("Failed to add track to Spotify queue");
   }
 }
