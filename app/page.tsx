@@ -26,7 +26,7 @@ export default function Component() {
     async function fetchSystems() {
       try {
         const fetchedSystems = await getSystems();
-        setSystems(fetchedSystems);
+        setSystems(fetchedSystems as System[]);
       } catch (error) {
         console.error("Failed to fetch systems:", error);
       }
