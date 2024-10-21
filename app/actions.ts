@@ -2,6 +2,7 @@
 
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
+import OpenAI from "openai";
 
 export async function getUsers() {
   try {
@@ -107,7 +108,7 @@ export async function registerUser(
 export async function togglePause() {
   try {
     const result = await sql`
-      UPDATE system
+      UPDATE systems
       SET is_paused = NOT is_paused
       WHERE id = 1
       RETURNING is_paused
@@ -122,7 +123,7 @@ export async function togglePause() {
 export async function getPauseState() {
   try {
     const result = await sql`
-      SELECT is_paused FROM system WHERE id = 1
+      SELECT is_paused FROM systems WHERE id = 1
     `;
     return result.rows[0].is_paused;
   } catch (error) {
@@ -241,11 +242,12 @@ export async function registerEntrance(name: string) {
 export async function addToQueue(trackUri: string) {
   try {
     const result = await sql`
-      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM system WHERE id = 1
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry, spotify_device_id FROM systems WHERE id = 1
     `;
     let accessToken = result.rows[0].spotify_access_token;
     const refreshToken = result.rows[0].spotify_refresh_token;
     const tokenExpiry = result.rows[0].spotify_token_expiry;
+    const deviceId = result.rows[0].spotify_device_id;
 
     if (!accessToken || !refreshToken) {
       throw new Error("No Spotify tokens found");
@@ -257,6 +259,48 @@ export async function addToQueue(trackUri: string) {
       accessToken = newTokens.access_token;
     }
 
+    // Check if playback is active
+    const playbackStateResponse = await fetch(
+      "https://api.spotify.com/v1/me/player",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!playbackStateResponse.ok) {
+      throw new Error("Failed to get playback state");
+    }
+
+    const playbackState = await playbackStateResponse.json();
+
+    // If no active device, transfer playback to the device on file
+    if (!playbackState.is_playing) {
+      const transferResponse = await fetch(
+        "https://api.spotify.com/v1/me/player",
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            device_ids: [deviceId],
+            play: true,
+          }),
+        }
+      );
+
+      if (!transferResponse.ok) {
+        throw new Error("Failed to transfer playback");
+      }
+
+      console.log("Playback transferred to device on file");
+    }
+
+    // Add track to queue
     const queueResponse = await fetch(
       `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(
         trackUri
@@ -373,7 +417,7 @@ export async function exchangeCodeForTokens(code: string) {
 
   // Save tokens to the database
   await sql`
-    UPDATE system
+    UPDATE systems
     SET spotify_access_token = ${data.access_token},
         spotify_refresh_token = ${data.refresh_token},
         spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
@@ -409,11 +453,144 @@ export async function refreshAccessToken(refresh_token: string) {
 
   // Update the access token and expiry in the database
   await sql`
-    UPDATE system
+    UPDATE systems
     SET spotify_access_token = ${data.access_token},
         spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
     WHERE id = 1
   `;
 
   return data;
+}
+
+// Add these new functions
+
+export async function getSpotifyDevices() {
+  try {
+    const result = await sql`
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM systems WHERE id = 1
+    `;
+    let accessToken = result.rows[0].spotify_access_token;
+    const refreshToken = result.rows[0].spotify_refresh_token;
+    const tokenExpiry = result.rows[0].spotify_token_expiry;
+
+    if (!accessToken || !refreshToken) {
+      throw new Error("No Spotify tokens found");
+    }
+
+    // Check if the access token is expired and refresh if necessary
+    if (Date.now() > tokenExpiry) {
+      const newTokens = await refreshAccessToken(refreshToken);
+      accessToken = newTokens.access_token;
+    }
+
+    const response = await fetch(
+      "https://api.spotify.com/v1/me/player/devices",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch Spotify devices");
+    }
+
+    const data = await response.json();
+    return data.devices.map((device: SpotifyDevice) => ({
+      id: device.id,
+      name: device.name,
+    }));
+  } catch (error) {
+    console.error("Error fetching Spotify devices:", error);
+    throw new Error("Failed to fetch Spotify devices");
+  }
+}
+
+interface SpotifyDevice {
+  id: string;
+  name: string;
+}
+
+export async function setSpotifyDevice(deviceId: string) {
+  try {
+    const result = await sql`
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM systems WHERE id = 1
+    `;
+    let accessToken = result.rows[0].spotify_access_token;
+    const refreshToken = result.rows[0].spotify_refresh_token;
+    const tokenExpiry = result.rows[0].spotify_token_expiry;
+
+    if (!accessToken || !refreshToken) {
+      throw new Error("No Spotify tokens found");
+    }
+
+    // Check if the access token is expired and refresh if necessary
+    if (Date.now() > tokenExpiry) {
+      const newTokens = await refreshAccessToken(refreshToken);
+      accessToken = newTokens.access_token;
+    }
+
+    const response = await fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ device_ids: [deviceId] }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to set Spotify device");
+    }
+
+    // Update the device ID in the database
+    await sql`
+      UPDATE systems
+      SET spotify_device_id = ${deviceId}
+      WHERE id = 1
+    `;
+
+    return true;
+  } catch (error) {
+    console.error("Error setting Spotify device:", error);
+    throw new Error("Failed to set Spotify device");
+  }
+}
+
+// Add this new function at the end of the file
+export async function getSystems() {
+  try {
+    const result = await sql`
+      SELECT name, slug FROM systems
+      ORDER BY name ASC
+    `;
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching systems:", error);
+    throw new Error("Failed to fetch systems");
+  }
+}
+
+// Add this new function at the end of the file
+export async function generateAndPlayAudio(message: string) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  try {
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "alloy",
+      input: message,
+    });
+
+    const arrayBuffer = await mp3.arrayBuffer();
+    const base64Audio = Buffer.from(arrayBuffer).toString("base64");
+
+    return base64Audio;
+  } catch (error) {
+    console.error("Error generating audio:", error);
+    throw new Error("Failed to generate audio");
+  }
 }

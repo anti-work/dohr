@@ -1,13 +1,5 @@
 # Dohr
 
-## Features
-
-- Continuous photo capture (every 5 seconds)
-- AI-powered face recognition
-- Customized audio playback based on identification
-- Web interface for user registration and admin controls
-- Notification system
-
 ## Getting started
 
 ```bash
@@ -27,15 +19,19 @@ CREATE TABLE IF NOT EXISTS users (
     track_name TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS system (
+CREATE TABLE IF NOT EXISTS systems (
     id SERIAL PRIMARY KEY,
     is_paused BOOLEAN NOT NULL,
     spotify_access_token TEXT,
     spotify_refresh_token TEXT,
-    spotify_token_expiry BIGINT
+    spotify_token_expiry BIGINT,
+    spotify_device_id TEXT,
+    name TEXT,
+    slug TEXT,
+    pin TEXT
 );
 
-INSERT INTO system (id, is_paused) VALUES (1, false) ON CONFLICT (id) DO NOTHING;
+INSERT INTO systems (id, is_paused, name, slug, pin) VALUES (1, false, "Antiwork", "antiwork", 0825) ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS entrances (
     id SERIAL PRIMARY KEY,
