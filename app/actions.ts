@@ -2,6 +2,7 @@
 
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
+import OpenAI from "openai";
 
 export async function getUsers() {
   try {
@@ -107,7 +108,7 @@ export async function registerUser(
 export async function togglePause() {
   try {
     const result = await sql`
-      UPDATE system
+      UPDATE systems
       SET is_paused = NOT is_paused
       WHERE id = 1
       RETURNING is_paused
@@ -122,7 +123,7 @@ export async function togglePause() {
 export async function getPauseState() {
   try {
     const result = await sql`
-      SELECT is_paused FROM system WHERE id = 1
+      SELECT is_paused FROM systems WHERE id = 1
     `;
     return result.rows[0].is_paused;
   } catch (error) {
@@ -241,7 +242,7 @@ export async function registerEntrance(name: string) {
 export async function addToQueue(trackUri: string) {
   try {
     const result = await sql`
-      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry, spotify_device_id FROM system WHERE id = 1
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry, spotify_device_id FROM systems WHERE id = 1
     `;
     let accessToken = result.rows[0].spotify_access_token;
     const refreshToken = result.rows[0].spotify_refresh_token;
@@ -416,7 +417,7 @@ export async function exchangeCodeForTokens(code: string) {
 
   // Save tokens to the database
   await sql`
-    UPDATE system
+    UPDATE systems
     SET spotify_access_token = ${data.access_token},
         spotify_refresh_token = ${data.refresh_token},
         spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
@@ -452,7 +453,7 @@ export async function refreshAccessToken(refresh_token: string) {
 
   // Update the access token and expiry in the database
   await sql`
-    UPDATE system
+    UPDATE systems
     SET spotify_access_token = ${data.access_token},
         spotify_token_expiry = ${Date.now() + data.expires_in * 1000}
     WHERE id = 1
@@ -466,7 +467,7 @@ export async function refreshAccessToken(refresh_token: string) {
 export async function getSpotifyDevices() {
   try {
     const result = await sql`
-      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM system WHERE id = 1
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM systems WHERE id = 1
     `;
     let accessToken = result.rows[0].spotify_access_token;
     const refreshToken = result.rows[0].spotify_refresh_token;
@@ -514,7 +515,7 @@ interface SpotifyDevice {
 export async function setSpotifyDevice(deviceId: string) {
   try {
     const result = await sql`
-      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM system WHERE id = 1
+      SELECT spotify_access_token, spotify_refresh_token, spotify_token_expiry FROM systems WHERE id = 1
     `;
     let accessToken = result.rows[0].spotify_access_token;
     const refreshToken = result.rows[0].spotify_refresh_token;
@@ -545,7 +546,7 @@ export async function setSpotifyDevice(deviceId: string) {
 
     // Update the device ID in the database
     await sql`
-      UPDATE system
+      UPDATE systems
       SET spotify_device_id = ${deviceId}
       WHERE id = 1
     `;
@@ -568,5 +569,28 @@ export async function getSystems() {
   } catch (error) {
     console.error("Error fetching systems:", error);
     throw new Error("Failed to fetch systems");
+  }
+}
+
+// Add this new function at the end of the file
+export async function generateAndPlayAudio(message: string) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  try {
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "alloy",
+      input: message,
+    });
+
+    const arrayBuffer = await mp3.arrayBuffer();
+    const base64Audio = Buffer.from(arrayBuffer).toString("base64");
+
+    return base64Audio;
+  } catch (error) {
+    console.error("Error generating audio:", error);
+    throw new Error("Failed to generate audio");
   }
 }

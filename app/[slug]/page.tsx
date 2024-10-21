@@ -40,6 +40,7 @@ import {
   getSpotifyAuthUrl,
   getSpotifyDevices,
   setSpotifyDevice,
+  generateAndPlayAudio,
 } from "../actions";
 import {
   Table,
@@ -57,10 +58,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import OpenAI from "openai";
-
-const openai = new OpenAI();
-openai.apiKey = process.env.OPENAI_API_KEY || "";
 
 interface User {
   id: number;
@@ -246,23 +243,14 @@ export default function Home() {
                         notifyAdmin(message);
                         fetchEntrances();
 
-                        const mp3 = await openai.audio.speech.create({
-                          model: "tts-1",
-                          voice: "alloy",
-                          input: `${matchedUser.name} is in the building!`,
-                        });
-
-                        const audioBlob = new Blob([await mp3.arrayBuffer()], {
-                          type: "audio/mpeg",
-                        });
-                        const audioUrl = URL.createObjectURL(audioBlob);
-
-                        const audio = new Audio(audioUrl);
-                        audio.play();
-
-                        audio.onended = () => {
-                          URL.revokeObjectURL(audioUrl);
-                        };
+                        try {
+                          const base64Audio = await generateAndPlayAudio(message);
+                          const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
+                          const audio = new Audio(audioUrl);
+                          audio.play();
+                        } catch (error) {
+                          console.error("Error playing audio:", error);
+                        }
                       } else {
                         console.log(
                           `${matchedUser.name} has already entered today. Skipping notification.`
