@@ -24,8 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     audio_uri TEXT NOT NULL,
     photo_url TEXT NOT NULL,
-    track_name TEXT NOT NULL,
-    is_admin BOOLEAN NOT NULL
+    track_name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS systems (

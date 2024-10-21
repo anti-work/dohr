@@ -103,7 +103,6 @@ export default function Home() {
   const [entrances, setEntrances] = useState<
     { name: string; timestamp: string; id: number }[]
   >([]);
-  const inputFileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
@@ -244,7 +243,9 @@ export default function Home() {
                         fetchEntrances();
 
                         try {
-                          const base64Audio = await generateAndPlayAudio(message);
+                          const base64Audio = await generateAndPlayAudio(
+                            message
+                          );
                           const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
                           const audio = new Audio(audioUrl);
                           audio.play();
@@ -317,7 +318,7 @@ export default function Home() {
     }
 
     if (!photoUrl) {
-      alert("Please upload a photo");
+      alert("Please capture a photo");
       return;
     }
 
@@ -340,11 +341,8 @@ export default function Home() {
         setSearchResults([]);
         setAudioUri("");
         setPhotoUrl("");
-        if (inputFileRef.current) {
-          inputFileRef.current.value = "";
-        }
       } else {
-        alert("No face detected in the uploaded photo");
+        alert("No face detected in the captured photo");
       }
     } catch (error) {
       console.error("Error registering user:", error);
@@ -375,23 +373,6 @@ export default function Home() {
     setSelectedTrack(track);
     setAudioUri(track.uri);
     setShowSearchResults(false);
-  };
-
-  const handlePhotoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!event.target.files) {
-      throw new Error("No file selected");
-    }
-
-    const file = event.target.files[0];
-
-    const newBlob = await upload(file.name, file, {
-      access: "public",
-      handleUploadUrl: "/api/avatar/upload",
-    });
-
-    setPhotoUrl(newBlob.url);
   };
 
   const handleCapturePhoto = async () => {
@@ -602,11 +583,7 @@ export default function Home() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Add New User</DialogTitle>
-                  <DialogDescription>
-                    Enter the details for the new user. Click save when
-                    you&apos;re done.
-                  </DialogDescription>
+                  <DialogTitle>Add new user</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                   <div className="grid gap-4 py-4">
@@ -625,28 +602,20 @@ export default function Home() {
                       <Label htmlFor="photo" className="text-right">
                         Photo
                       </Label>
-                      <Input
-                        type="file"
-                        id="photo"
-                        name="photo"
-                        accept="image/*"
-                        className="col-span-3"
-                        ref={inputFileRef}
-                        onChange={handlePhotoUpload}
-                      />
+                      <Button
+                        type="button"
+                        onClick={handleCapturePhoto}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2 col-span-3"
+                      >
+                        <Camera className="mr-2" />{" "}
+                        <strong>Capture Photo</strong>
+                      </Button>
+                      {photoUrl && (
+                        <div>
+                          Captured photo: <a href={photoUrl}>{photoUrl}</a>
+                        </div>
+                      )}
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleCapturePhoto}
-                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2"
-                    >
-                      <Camera className="mr-2" /> <strong>Capture Photo</strong>
-                    </Button>
-                    {photoUrl && (
-                      <div>
-                        Uploaded photo: <a href={photoUrl}>{photoUrl}</a>
-                      </div>
-                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="audio" className="text-right">
                         Audio
@@ -700,7 +669,7 @@ export default function Home() {
                   </div>
                   <DialogFooter>
                     <Button type="submit">
-                      <strong>Save changes</strong>
+                      <strong>Add user</strong>
                     </Button>
                   </DialogFooter>
                 </form>
