@@ -1,13 +1,5 @@
 # Dohr
 
-## Features
-
-- Continuous photo capture (every 5 seconds)
-- AI-powered face recognition
-- Customized audio playback based on identification
-- Web interface for user registration and admin controls
-- Notification system
-
 ## Getting started
 
 ```bash
