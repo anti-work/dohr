@@ -42,7 +42,7 @@ export default function Component() {
     {
       icon: <Camera className="w-6 h-6" />,
       title: "Photo Capture",
-      text: "Continuous photo capture (every 5 seconds)",
+      text: "Continuous photo capture and facial recognition",
     },
     {
       icon: <Music className="w-6 h-6" />,
