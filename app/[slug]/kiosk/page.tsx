@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Webcam } from "@/components/Webcam";
 import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { upload } from "@vercel/blob/client";
-import { getUsers, getEntrances } from "../../actions";
+import { getUsers } from "../../actions";
 
 interface User {
   id: number;
@@ -25,14 +25,6 @@ export default function KioskPage() {
       setUsers(data as User[]);
     } catch (error) {
       console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchEntrances = async () => {
-    try {
-      await getEntrances();
-    } catch (error) {
-      console.error("Error fetching entrances:", error);
     }
   };
 
