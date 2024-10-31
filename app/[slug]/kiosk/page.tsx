@@ -58,7 +58,6 @@ export default function KioskPage() {
         fullscreen
         users={users}
         onCapture={handleCapture}
-        onEntranceRegistered={fetchEntrances}
       />
       <RegisterUserModal
         preloadedPhoto={capturedPhoto || ""}

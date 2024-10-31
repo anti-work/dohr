@@ -259,11 +259,7 @@ export default function Home() {
       <div className="flex gap-4">
         <Card className="w-1/2">
           <CardContent className="p-4">
-            <Webcam
-              isPaused={isPaused}
-              users={users}
-              onEntranceRegistered={fetchEntrances}
-            />
+            <Webcam isPaused={isPaused} users={users} />
           </CardContent>
         </Card>
 

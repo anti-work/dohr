@@ -21,7 +21,6 @@ interface WebcamProps {
   }[];
   fullscreen?: boolean;
   onCapture?: (blob: Blob) => void;
-  onEntranceRegistered?: () => void;
 }
 
 export function Webcam({
@@ -29,7 +28,6 @@ export function Webcam({
   users,
   fullscreen = false,
   onCapture,
-  onEntranceRegistered,
 }: WebcamProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -146,7 +144,6 @@ export function Webcam({
                         await addToQueue(matchedUser.audio_uri);
                         const message = `${matchedUser.name} is in the building!`;
                         notifyAdmin(message);
-                        onEntranceRegistered?.();
 
                         try {
                           const base64Audio = await generateAndPlayAudio(
@@ -168,7 +165,7 @@ export function Webcam({
         }, 300);
       });
     }
-  }, [isPaused, users, onEntranceRegistered]);
+  }, [isPaused, users]);
 
   const handleCapture = () => {
     if (!videoRef.current || !onCapture) return;
