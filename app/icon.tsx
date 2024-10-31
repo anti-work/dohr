@@ -26,16 +26,26 @@ export default function Icon() {
       >
         <div
           style={{
-            width: "1em",
-            height: "1em",
-            borderRadius: "9999px",
-            backgroundColor: "currentColor",
-            display: "block",
-            position: "absolute",
-            right: "1.5em",
-            top: "2.5em",
+            width: "2.5em",
+            height: "4em",
+            border: ".3em solid currentColor",
+            position: "relative",
+            display: "flex",
           }}
-        />
+        >
+          <div
+            style={{
+              width: "0.4em",
+              height: "0.4em",
+              borderRadius: "9999px",
+              backgroundColor: "currentColor",
+              position: "absolute",
+              right: "0.3em",
+              top: "50%",
+              transform: "translateY(-50%)",
+            }}
+          />
+        </div>
       </div>
     ),
     {

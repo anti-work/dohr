@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface LogoProps {
   className?: string;
@@ -9,6 +9,10 @@ interface LogoProps {
 
 const Logo = ({ className = "text-8xl" }: LogoProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    setIsAnimating(true);
+  }, []);
 
   const handleClick = () => {
     if (!isAnimating) {

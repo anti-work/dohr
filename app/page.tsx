@@ -99,7 +99,7 @@ export default function Component() {
           you walk in the door
         </p>
       </div>
-      <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[2000px] mx-auto w-full h-fit">
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[2000px] mx-auto w-full h-fit">
         {mainFeatures.map((mainFeature, index) => (
           <Card key={index} className="p-8">
             <CardHeader>
