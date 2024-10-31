@@ -19,15 +19,11 @@ import {
   removeUser,
   togglePause,
   getPauseState,
-  notifyAdmin,
   getEntrances,
-  registerEntrance,
-  addToQueue,
   removeEntrance,
   getSpotifyAuthUrl,
   getSpotifyDevices,
   setSpotifyDevice,
-  generateAndPlayAudio,
 } from "../actions";
 import {
   Table,
@@ -75,9 +71,6 @@ export default function Home() {
   const [entrances, setEntrances] = useState<
     { name: string; timestamp: string; id: number }[]
   >([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [spotifyDevices, setSpotifyDevices] = useState<SpotifyDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<SpotifyDevice | null>(
@@ -98,7 +91,6 @@ export default function Home() {
       fetchUsers();
       fetchPauseState();
       fetchEntrances();
-      startVideo();
       const checkSpotifyConnection = async () => {
         try {
           const devices = await getSpotifyDevices();
@@ -112,135 +104,6 @@ export default function Home() {
       checkSpotifyConnection();
     }
   }, [isAuthenticated]);
-
-  const loadFaceMatcher = useCallback(async () => {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
-    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
-    await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
-
-    const labeledDescriptors = await Promise.all(
-      users.map(async (user) => {
-        const img = await faceapi.fetchImage(user.photo_url);
-        const detection = await faceapi
-          .detectSingleFace(img)
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-        return new faceapi.LabeledFaceDescriptors(
-          user.name,
-          detection ? [detection.descriptor] : []
-        );
-      })
-    );
-
-    if (labeledDescriptors.length > 0) {
-      faceMatcher.current = new faceapi.FaceMatcher(labeledDescriptors);
-    }
-  }, [users]);
-
-  const startVideo = () => {
-    navigator.mediaDevices
-      .getUserMedia({ video: {} })
-      .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      })
-      .catch((err) => console.error(err));
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && videoRef.current && canvasRef.current) {
-      videoRef.current.addEventListener("play", () => {
-        loadFaceMatcher();
-
-        const displaySize = {
-          width: videoRef.current!.width,
-          height: videoRef.current!.height,
-        };
-        faceapi.matchDimensions(canvasRef.current!, displaySize);
-
-        setInterval(async () => {
-          if (isPaused) return;
-
-          const detections = await faceapi
-            .detectAllFaces(videoRef.current!)
-            .withFaceLandmarks()
-            .withFaceDescriptors();
-
-          const resizedDetections = faceapi.resizeResults(
-            detections,
-            displaySize
-          );
-
-          if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext("2d");
-            if (ctx) {
-              ctx.clearRect(
-                0,
-                0,
-                canvasRef.current.width,
-                canvasRef.current.height
-              );
-              faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
-
-              for (const detection of resizedDetections) {
-                if (faceMatcher.current) {
-                  const bestMatch = faceMatcher.current.findBestMatch(
-                    detection.descriptor
-                  );
-                  const box = detection.detection.box;
-                  const drawOptions = {
-                    label: bestMatch.toString(),
-                    lineWidth: 2,
-                    boxColor: "blue",
-                    drawLabelOptions: {
-                      anchorPosition: faceapi.draw.AnchorPosition.BOTTOM_LEFT,
-                      backgroundColor: "rgba(0, 0, 255, 0.5)",
-                    },
-                  };
-                  new faceapi.draw.DrawBox(box, drawOptions).draw(ctx);
-
-                  if (bestMatch.distance < 0.6) {
-                    const matchedUser = users.find(
-                      (user) => user.name === bestMatch.label
-                    );
-                    if (matchedUser) {
-                      const isNewEntry = await registerEntrance(
-                        matchedUser.name
-                      );
-                      if (isNewEntry) {
-                        await addToQueue(matchedUser.audio_uri);
-                        const message = `${matchedUser.name} is in the building!`;
-                        notifyAdmin(message);
-                        fetchEntrances();
-
-                        try {
-                          const base64Audio = await generateAndPlayAudio(
-                            message
-                          );
-                          const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
-                          const audio = new Audio(audioUrl);
-                          audio.play();
-                        } catch (error) {
-                          console.error("Error playing audio:", error);
-                        }
-                      } else {
-                        console.log(
-                          `${matchedUser.name} has already entered today. Skipping notification.`
-                        );
-                      }
-                    }
-                  } else {
-                    console.log("Unknown person at the door");
-                  }
-                }
-              }
-            }
-          }
-        }, 300);
-      });
-    }
-  }, [users, isPaused, loadFaceMatcher, isAuthenticated]);
 
   const fetchUsers = async () => {
     try {
@@ -310,43 +173,6 @@ export default function Home() {
   const handleDeviceSelect = async (device: SpotifyDevice) => {
     setSelectedDevice(device);
     await setSpotifyDevice(device.id);
-  };
-
-  const handleFaceDetection = async (detections: any[]) => {
-    if (!faceMatcher.current) return;
-
-    for (const detection of detections) {
-      const bestMatch = faceMatcher.current.findBestMatch(detection.descriptor);
-
-      if (bestMatch.distance < 0.6) {
-        const matchedUser = users.find((user) => user.name === bestMatch.label);
-
-        if (matchedUser) {
-          const isNewEntry = await registerEntrance(matchedUser.name);
-          if (isNewEntry) {
-            await addToQueue(matchedUser.audio_uri);
-            const message = `${matchedUser.name} is in the building!`;
-            notifyAdmin(message);
-            fetchEntrances();
-
-            try {
-              const base64Audio = await generateAndPlayAudio(message);
-              const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
-              const audio = new Audio(audioUrl);
-              audio.play();
-            } catch (error) {
-              console.error("Error playing audio:", error);
-            }
-          } else {
-            console.log(
-              `${matchedUser.name} has already entered today. Skipping notification.`
-            );
-          }
-        }
-      } else {
-        console.log("Unknown person at the door");
-      }
-    }
   };
 
   if (!isAuthenticated) {
@@ -436,8 +262,8 @@ export default function Home() {
           <CardContent className="p-4">
             <Webcam
               isPaused={isPaused}
-              onFaceDetected={handleFaceDetection}
-              faceMatcher={faceMatcher.current}
+              users={users}
+              onEntranceRegistered={fetchEntrances}
             />
           </CardContent>
         </Card>

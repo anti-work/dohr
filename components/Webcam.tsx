@@ -5,24 +5,30 @@ import { Badge } from "@/components/ui/badge";
 import * as faceapi from "face-api.js";
 import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
+import { addToQueue, registerEntrance, notifyAdmin, generateAndPlayAudio } from "@/app/actions";
 
 interface WebcamProps {
   isPaused?: boolean;
-  onFaceDetected?: (detection: faceapi.WithFaceLandmarks<{ detection: faceapi.FaceDetection }, faceapi.FaceLandmarks68>[]) => void;
-  faceMatcher?: faceapi.FaceMatcher;
+  users: {
+    name: string;
+    photo_url: string;
+    audio_uri: string;
+  }[];
   fullscreen?: boolean;
   onCapture?: (blob: Blob) => void;
+  onEntranceRegistered?: () => void;
 }
 
 export function Webcam({
   isPaused = false,
-  onFaceDetected,
-  faceMatcher,
+  users,
   fullscreen = false,
   onCapture,
+  onEntranceRegistered,
 }: WebcamProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
 
   useEffect(() => {
     const startVideo = () => {
@@ -39,14 +45,35 @@ export function Webcam({
     startVideo();
   }, []);
 
+  const loadFaceMatcher = async () => {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
+    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+    await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
+
+    const labeledDescriptors = await Promise.all(
+      users.map(async (user) => {
+        const img = await faceapi.fetchImage(user.photo_url);
+        const detection = await faceapi
+          .detectSingleFace(img)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        return new faceapi.LabeledFaceDescriptors(
+          user.name,
+          detection ? [detection.descriptor] : []
+        );
+      })
+    );
+
+    if (labeledDescriptors.length > 0) {
+      faceMatcher.current = new faceapi.FaceMatcher(labeledDescriptors);
+    }
+  };
+
   useEffect(() => {
-    if (
-      videoRef.current &&
-      canvasRef.current &&
-      onFaceDetected &&
-      faceMatcher
-    ) {
+    if (videoRef.current && canvasRef.current) {
       videoRef.current.addEventListener("play", () => {
+        loadFaceMatcher();
+
         const displaySize = {
           width: videoRef.current!.width,
           height: videoRef.current!.height,
@@ -61,13 +88,60 @@ export function Webcam({
             .withFaceLandmarks()
             .withFaceDescriptors();
 
-          if (detections.length > 0) {
-            onFaceDetected(detections);
+          const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+          if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext("2d");
+            if (ctx) {
+              ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+              faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
+
+              for (const detection of resizedDetections) {
+                if (faceMatcher.current) {
+                  const bestMatch = faceMatcher.current.findBestMatch(detection.descriptor);
+                  const box = detection.detection.box;
+                  const drawOptions = {
+                    label: bestMatch.toString(),
+                    lineWidth: 2,
+                    boxColor: "blue",
+                    drawLabelOptions: {
+                      anchorPosition: faceapi.draw.AnchorPosition.BOTTOM_LEFT,
+                      backgroundColor: "rgba(0, 0, 255, 0.5)",
+                    },
+                  };
+                  new faceapi.draw.DrawBox(box, drawOptions).draw(ctx);
+
+                  if (bestMatch.distance < 0.6) {
+                    const matchedUser = users.find(
+                      (user) => user.name === bestMatch.label
+                    );
+                    if (matchedUser) {
+                      const isNewEntry = await registerEntrance(matchedUser.name);
+                      if (isNewEntry) {
+                        await addToQueue(matchedUser.audio_uri);
+                        const message = `${matchedUser.name} is in the building!`;
+                        notifyAdmin(message);
+                        onEntranceRegistered?.();
+
+                        try {
+                          const base64Audio = await generateAndPlayAudio(message);
+                          const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
+                          const audio = new Audio(audioUrl);
+                          audio.play();
+                        } catch (error) {
+                          console.error("Error playing audio:", error);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }, 300);
       });
     }
-  }, [isPaused, onFaceDetected, faceMatcher]);
+  }, [isPaused, users, onEntranceRegistered]);
 
   const handleCapture = () => {
     if (!videoRef.current || !onCapture) return;
