@@ -14,7 +14,7 @@ const Logo = ({ className = "text-8xl" }: LogoProps) => {
           rotateY: [0, 80, 80, 0],
         }}
         transition={{
-          duration: 2,
+          duration: 4, // Increased duration from 2 to 4 seconds
           times: [0, 0.2, 0.8, 1],
           repeat: 0,
           ease: "easeInOut",
