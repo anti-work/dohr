@@ -13,7 +13,6 @@ import { getSystems } from "./actions";
 import {
   Music,
   Bell,
-  Shield,
   Users,
   Clock,
   Play,
@@ -57,11 +56,6 @@ export default function Component() {
       text: "Advanced user recognition and security system",
       subFeatures: [
         {
-          icon: <Shield className="w-6 h-6" />,
-          title: "Secure Access",
-          text: "PIN-protected admin interface",
-        },
-        {
           icon: <Clock className="w-6 h-6" />,
           title: "Entry Logging",
           text: "24-hour visitor tracking",
@@ -84,11 +78,6 @@ export default function Component() {
           text: "Spotify integration with device management",
         },
         {
-          icon: <Radio className="w-6 h-6" />,
-          title: "Device Sync",
-          text: "Multi-device Spotify playback",
-        },
-        {
           icon: <Volume2 className="w-6 h-6" />,
           title: "Voice Synthesis",
           text: "AI-powered text-to-speech greetings",
@@ -104,11 +93,6 @@ export default function Component() {
           icon: <MessageSquare className="w-6 h-6" />,
           title: "Custom Messages",
           text: "Personalized welcome messages",
-        },
-        {
-          icon: <Bell className="w-6 h-6" />,
-          title: "Smart Notifications",
-          text: "Instant alerts via Slack and Telegram",
         },
         {
           icon: <Radio className="w-6 h-6" />,
