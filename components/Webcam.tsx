@@ -29,6 +29,7 @@ export function Webcam({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
+  const modelsLoaded = useRef(false);
 
   useEffect(() => {
     const startVideo = () => {
@@ -45,10 +46,17 @@ export function Webcam({
     startVideo();
   }, []);
 
+  const loadModels = async () => {
+    if (!modelsLoaded.current) {
+      await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
+      await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+      await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
+      modelsLoaded.current = true;
+    }
+  };
+
   const loadFaceMatcher = async () => {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
-    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
-    await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
+    await loadModels();
 
     const labeledDescriptors = await Promise.all(
       users.map(async (user) => {
@@ -81,7 +89,7 @@ export function Webcam({
         faceapi.matchDimensions(canvasRef.current!, displaySize);
 
         setInterval(async () => {
-          if (isPaused) return;
+          if (isPaused || !modelsLoaded.current) return;
 
           const detections = await faceapi
             .detectAllFaces(videoRef.current!)
