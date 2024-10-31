@@ -10,20 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getSystems } from "./actions";
-import {
-  Music,
-  Bell,
-  Users,
-  Clock,
-  Play,
-  Volume2,
-  UserPlus,
-  Radio,
-  MessageSquare,
-  Zap,
-  Moon,
-  Sun,
-} from "lucide-react";
+import { Music, Bell, Smile, Moon, Sun, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
 import { useTheme } from "next-themes";
@@ -51,55 +38,19 @@ export default function Component() {
 
   const mainFeatures = [
     {
-      icon: <Users className="w-6 h-6" />,
-      title: "Smart Access Control",
-      text: "Advanced user recognition and security system",
-      subFeatures: [
-        {
-          icon: <Clock className="w-6 h-6" />,
-          title: "Entry Logging",
-          text: "24-hour visitor tracking",
-        },
-        {
-          icon: <UserPlus className="w-6 h-6" />,
-          title: "Easy Registration",
-          text: "Quick user onboarding process",
-        },
-      ],
+      icon: <Smile className="w-6 h-6" />,
+      title: "Effortless Entry",
+      text: "Just walk in and smile! Our smart system automatically recognizes you and handles registration for new faces",
     },
     {
       icon: <Music className="w-6 h-6" />,
-      title: "Audio Experience",
-      text: "Comprehensive audio and music management",
-      subFeatures: [
-        {
-          icon: <Play className="w-6 h-6" />,
-          title: "Music Control",
-          text: "Spotify integration with device management",
-        },
-        {
-          icon: <Volume2 className="w-6 h-6" />,
-          title: "Voice Synthesis",
-          text: "AI-powered text-to-speech greetings",
-        },
-      ],
+      title: "Spotify Integration",
+      text: "Connect your Spotify account to play your favorite playlists and tracks from your connected devices",
     },
     {
       icon: <Bell className="w-6 h-6" />,
-      title: "Communication",
-      text: "Comprehensive notification and messaging system",
-      subFeatures: [
-        {
-          icon: <MessageSquare className="w-6 h-6" />,
-          title: "Custom Messages",
-          text: "Personalized welcome messages",
-        },
-        {
-          icon: <Radio className="w-6 h-6" />,
-          title: "Intercom System",
-          text: "Two-way communication with visitors",
-        },
-      ],
+      title: "Multi-Channel Notifications",
+      text: "Instant notifications via Slack, Telegram and more to keep your team in sync and social",
     },
   ];
 
@@ -158,22 +109,7 @@ export default function Component() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-lg mb-8">{mainFeature.text}</p>
-              <div className="flex flex-col gap-4">
-                {mainFeature.subFeatures.map((subFeature, subIndex) => (
-                  <Card key={subIndex} className="p-4">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        {subFeature.icon}
-                        <span>{subFeature.title}</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{subFeature.text}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <p className="text-lg">{mainFeature.text}</p>
             </CardContent>
           </Card>
         ))}
