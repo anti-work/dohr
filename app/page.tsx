@@ -10,7 +10,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getSystems } from "./actions";
-import { Music, Bell, Shield } from "lucide-react";
+import {
+  Music,
+  Bell,
+  Shield,
+  Users,
+  Clock,
+  Play,
+  Volume2,
+  UserPlus,
+  Trash2,
+  Radio,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
 
@@ -20,7 +33,6 @@ interface System {
 }
 
 export default function Component() {
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [systems, setSystems] = useState<System[]>([]);
 
   useEffect(() => {
@@ -35,93 +47,139 @@ export default function Component() {
     fetchSystems();
   }, []);
 
-  const handleDropdownClick = (dropdownName: string) => {
-    setActiveDropdown(activeDropdown === dropdownName ? null : dropdownName);
-  };
-
-  const features = [
+  const mainFeatures = [
+    {
+      icon: <Users className="w-6 h-6" />,
+      title: "Smart Access Control",
+      text: "Advanced user recognition and security system",
+      subFeatures: [
+        {
+          icon: <Shield className="w-6 h-6" />,
+          title: "Secure Access",
+          text: "PIN-protected admin interface",
+        },
+        {
+          icon: <Clock className="w-6 h-6" />,
+          title: "Entry Logging",
+          text: "24-hour visitor tracking",
+        },
+        {
+          icon: <UserPlus className="w-6 h-6" />,
+          title: "Easy Registration",
+          text: "Quick user onboarding process",
+        },
+      ],
+    },
     {
       icon: <Music className="w-6 h-6" />,
-      title: "Welcome Songs",
-      text: "Customized audio playback based on identification",
+      title: "Audio Experience",
+      text: "Comprehensive audio and music management",
+      subFeatures: [
+        {
+          icon: <Play className="w-6 h-6" />,
+          title: "Music Control",
+          text: "Spotify integration with device management",
+        },
+        {
+          icon: <Radio className="w-6 h-6" />,
+          title: "Device Sync",
+          text: "Multi-device Spotify playback",
+        },
+        {
+          icon: <Volume2 className="w-6 h-6" />,
+          title: "Voice Synthesis",
+          text: "AI-powered text-to-speech greetings",
+        },
+      ],
     },
     {
       icon: <Bell className="w-6 h-6" />,
-      title: "Notifications",
-      text: "Pings sent to Slack and Telegram",
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Admin Interface",
-      text: "For user registration and management",
+      title: "Communication",
+      text: "Comprehensive notification and messaging system",
+      subFeatures: [
+        {
+          icon: <MessageSquare className="w-6 h-6" />,
+          title: "Custom Messages",
+          text: "Personalized welcome messages",
+        },
+        {
+          icon: <Bell className="w-6 h-6" />,
+          title: "Smart Notifications",
+          text: "Instant alerts via Slack and Telegram",
+        },
+        {
+          icon: <Radio className="w-6 h-6" />,
+          title: "Intercom System",
+          text: "Two-way communication with visitors",
+        },
+      ],
     },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center">
-      <main className="flex-grow flex items-center justify-center w-full">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="flex flex-col items-center space-y-8 text-center">
-              <div className="space-y-2">
-                <Logo />
-                <h2 className="text-xl font-light tracking-tighter sm:text-2xl md:text-3xl lg:text-4xl/none">
-                  An AI-Powered Doorbell
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 gap-4 mt-8">
-                {features.map((feature, index) => (
-                  <Card key={index}>
+    <div className="min-h-screen grid grid-rows-[auto_1fr] gap-8 p-8">
+      <header className="flex justify-between items-center relative">
+        <Logo />
+        <div className="flex gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>Contact Sales</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {systems.map((system) => (
+                <DropdownMenuItem key={system.slug}>
+                  <Link href={`/${system.slug}`}>{system.name}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">Log into Dohr</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {systems.map((system) => (
+                <DropdownMenuItem key={system.slug}>
+                  <Link href={`/${system.slug}`}>
+                    {system.name} ({system.slug})
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+      <main className="flex flex-col gap-6 max-w-[2000px] mx-auto w-full">
+        {mainFeatures.map((mainFeature, index) => (
+          <Card key={index} className="p-8 lg:p-12 xl:p-16">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-4 text-2xl lg:text-3xl xl:text-4xl">
+                {mainFeature.icon}
+                <span>{mainFeature.title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl lg:text-2xl xl:text-3xl mb-8">
+                {mainFeature.text}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mainFeature.subFeatures.map((subFeature, subIndex) => (
+                  <Card key={subIndex} className="p-6">
                     <CardHeader>
-                      <CardTitle className="flex items-center justify-center space-x-3">
-                        {feature.icon}
-                        <span>{feature.title}</span>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        {subFeature.icon}
+                        <span>{subFeature.title}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p>{feature.text}</p>
+                      <p className="text-base">{subFeature.text}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-              <div className="space-x-4 mt-8">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button onClick={() => handleDropdownClick("contact")}>
-                      Contact Sales
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {systems.map((system) => (
-                      <DropdownMenuItem key={system.slug}>
-                        <Link href={`/${system.slug}`}>{system.name}</Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDropdownClick("login")}
-                    >
-                      Log into Dohr
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {systems.map((system) => (
-                      <DropdownMenuItem key={system.slug}>
-                        <Link href={`/${system.slug}`}>
-                          {system.name} ({system.slug})
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
-        </section>
+            </CardContent>
+          </Card>
+        ))}
       </main>
     </div>
   );

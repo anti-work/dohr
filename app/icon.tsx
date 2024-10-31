@@ -2,12 +2,10 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-import Logo from "@/components/Logo";
-
 // Image metadata
 export const size = {
-  width: 32,
-  height: 32,
+  width: 128,
+  height: 128,
 };
 export const contentType = "image/png";
 
@@ -18,15 +16,25 @@ export default function Icon() {
       <div
         style={{
           fontSize: 24,
-          width: 32,
-          height: 32,
+          width: 128,
+          height: 128,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           color: "black",
         }}
       >
-        <div className="w-[0.1em] h-[0.1em] rounded-full bg-current inline-block absolute right-[0.05em]" />
+        <div
+          style={{
+            width: "1em",
+            height: "1em",
+            borderRadius: "9999px",
+            backgroundColor: "currentColor",
+            display: "block",
+            position: "absolute",
+            right: "1em",
+          }}
+        />
       </div>
     ),
     {
