@@ -22,9 +22,12 @@ import {
   Radio,
   MessageSquare,
   Zap,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
+import { useTheme } from "next-themes";
 
 interface System {
   name: string;
@@ -33,6 +36,7 @@ interface System {
 
 export default function Component() {
   const [systems, setSystems] = useState<System[]>([]);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     async function fetchSystems() {
@@ -119,7 +123,18 @@ export default function Component() {
     <div className="grid grid-rows-[auto_auto_1fr_auto] gap-8 p-8">
       <header className="flex justify-between items-center relative">
         <Logo />
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <Button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            variant="ghost"
+            size="icon"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
           <Button asChild>
             <a href="mailto:sahil@gumroad.com">Contact Sales</a>
           </Button>
@@ -139,7 +154,7 @@ export default function Component() {
           </DropdownMenu>
         </div>
       </header>
-      <div className="text-center py-16 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg">
+      <div className="text-center py-16 bg-gradient-to-r from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-lg">
         <div className="flex items-center justify-center gap-4 text-4xl font-bold mb-4">
           <Zap className="w-12 h-12 text-yellow-500" />
           <h1>GET AMPED UP FOR WORK!</h1>
