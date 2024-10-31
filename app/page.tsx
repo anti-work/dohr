@@ -10,8 +10,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getSystems } from "./actions";
-import { Camera, Music, Bell, Shield } from "lucide-react";
+import {
+  Music,
+  Bell,
+  Shield,
+  Users,
+  Clock,
+  Play,
+  Volume2,
+  UserPlus,
+  Radio,
+  MessageSquare,
+  Zap,
+  Moon,
+  Sun,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Logo from "@/components/Logo";
+import { useTheme } from "next-themes";
 
 interface System {
   name: string;
@@ -19,8 +35,8 @@ interface System {
 }
 
 export default function Component() {
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [systems, setSystems] = useState<System[]>([]);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     async function fetchSystems() {
@@ -34,100 +50,149 @@ export default function Component() {
     fetchSystems();
   }, []);
 
-  const handleDropdownClick = (dropdownName: string) => {
-    setActiveDropdown(activeDropdown === dropdownName ? null : dropdownName);
-  };
-
-  const features = [
+  const mainFeatures = [
     {
-      icon: <Camera className="w-6 h-6" />,
-      title: "Photo Capture",
-      text: "Continuous photo capture and facial recognition",
+      icon: <Users className="w-6 h-6" />,
+      title: "Smart Access Control",
+      text: "Advanced user recognition and security system",
+      subFeatures: [
+        {
+          icon: <Shield className="w-6 h-6" />,
+          title: "Secure Access",
+          text: "PIN-protected admin interface",
+        },
+        {
+          icon: <Clock className="w-6 h-6" />,
+          title: "Entry Logging",
+          text: "24-hour visitor tracking",
+        },
+        {
+          icon: <UserPlus className="w-6 h-6" />,
+          title: "Easy Registration",
+          text: "Quick user onboarding process",
+        },
+      ],
     },
     {
       icon: <Music className="w-6 h-6" />,
-      title: "Welcome Songs",
-      text: "Customized audio playback based on identification",
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Web Interface",
-      text: "Admin interface for user registration and management",
+      title: "Audio Experience",
+      text: "Comprehensive audio and music management",
+      subFeatures: [
+        {
+          icon: <Play className="w-6 h-6" />,
+          title: "Music Control",
+          text: "Spotify integration with device management",
+        },
+        {
+          icon: <Radio className="w-6 h-6" />,
+          title: "Device Sync",
+          text: "Multi-device Spotify playback",
+        },
+        {
+          icon: <Volume2 className="w-6 h-6" />,
+          title: "Voice Synthesis",
+          text: "AI-powered text-to-speech greetings",
+        },
+      ],
     },
     {
       icon: <Bell className="w-6 h-6" />,
-      title: "Notifications",
-      text: "Pings sent to Slack and Telegram",
+      title: "Communication",
+      text: "Comprehensive notification and messaging system",
+      subFeatures: [
+        {
+          icon: <MessageSquare className="w-6 h-6" />,
+          title: "Custom Messages",
+          text: "Personalized welcome messages",
+        },
+        {
+          icon: <Bell className="w-6 h-6" />,
+          title: "Smart Notifications",
+          text: "Instant alerts via Slack and Telegram",
+        },
+        {
+          icon: <Radio className="w-6 h-6" />,
+          title: "Intercom System",
+          text: "Two-way communication with visitors",
+        },
+      ],
     },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center">
-      <main className="flex-grow flex items-center justify-center w-full">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="flex flex-col items-center space-y-8 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Dohr
-                </h1>
-                <h2 className="text-xl font-light tracking-tighter sm:text-2xl md:text-3xl lg:text-4xl/none">
-                  An AI-Powered Doorbell
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 text-left">
-                {features.map((feature, index) => (
-                  <Card key={index}>
+    <div className="grid grid-rows-[auto_auto_1fr_auto] gap-8 p-8">
+      <header className="flex justify-between items-center relative">
+        <Logo />
+        <div className="flex gap-4 items-center">
+          <Button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            variant="ghost"
+            size="icon"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
+          <Button asChild>
+            <a href="mailto:sahil@gumroad.com">Contact Sales</a>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">Log into Dohr</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {systems.map((system) => (
+                <DropdownMenuItem key={system.slug}>
+                  <Link href={`/${system.slug}`}>
+                    {system.name} ({system.slug})
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+      <div className="text-center py-16 bg-gradient-to-r from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 rounded-lg">
+        <div className="flex items-center justify-center gap-4 text-4xl font-bold mb-4">
+          <Zap className="w-12 h-12 text-yellow-500" />
+          <h1>GET AMPED UP FOR WORK!</h1>
+        </div>
+        <p className="text-xl">
+          Set the tone for the rest of the day by playing your welcome song when
+          you walk in the door
+        </p>
+      </div>
+      <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[2000px] mx-auto w-full h-fit">
+        {mainFeatures.map((mainFeature, index) => (
+          <Card key={index} className="p-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-4 text-xl">
+                {mainFeature.icon}
+                <span>{mainFeature.title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg mb-8">{mainFeature.text}</p>
+              <div className="flex flex-col gap-4">
+                {mainFeature.subFeatures.map((subFeature, subIndex) => (
+                  <Card key={subIndex} className="p-4">
                     <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        {feature.icon}
-                        <span>{feature.title}</span>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        {subFeature.icon}
+                        <span>{subFeature.title}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p>{feature.text}</p>
+                      <p className="text-sm">{subFeature.text}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-              <div className="space-x-4 mt-8">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button onClick={() => handleDropdownClick("contact")}>
-                      Contact Sales
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {systems.map((system) => (
-                      <DropdownMenuItem key={system.slug}>
-                        <Link href={`/${system.slug}`}>{system.name}</Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDropdownClick("login")}
-                    >
-                      Log into Dohr
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {systems.map((system) => (
-                      <DropdownMenuItem key={system.slug}>
-                        <Link href={`/${system.slug}`}>
-                          {system.name} ({system.slug})
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
-        </section>
+            </CardContent>
+          </Card>
+        ))}
       </main>
     </div>
   );
