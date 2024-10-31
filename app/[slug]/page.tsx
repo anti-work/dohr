@@ -57,6 +57,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Webcam } from "@/components/Webcam";
+import { RegisterUserModal } from "@/components/RegisterUserModal";
 
 interface User {
   id: number;
@@ -429,6 +431,45 @@ export default function Home() {
     await setSpotifyDevice(device.id);
   };
 
+  const handleFaceDetection = async (detections: any[]) => {
+    if (!faceMatcher.current) return;
+
+    for (const detection of detections) {
+      const bestMatch = faceMatcher.current.findBestMatch(detection.descriptor);
+
+      if (bestMatch.distance < 0.6) {
+        const matchedUser = users.find(
+          (user) => user.name === bestMatch.label
+        );
+
+        if (matchedUser) {
+          const isNewEntry = await registerEntrance(matchedUser.name);
+          if (isNewEntry) {
+            await addToQueue(matchedUser.audio_uri);
+            const message = `${matchedUser.name} is in the building!`;
+            notifyAdmin(message);
+            fetchEntrances();
+
+            try {
+              const base64Audio = await generateAndPlayAudio(message);
+              const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
+              const audio = new Audio(audioUrl);
+              audio.play();
+            } catch (error) {
+              console.error("Error playing audio:", error);
+            }
+          } else {
+            console.log(
+              `${matchedUser.name} has already entered today. Skipping notification.`
+            );
+          }
+        }
+      } else {
+        console.log("Unknown person at the door");
+      }
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -514,27 +555,11 @@ export default function Home() {
       <div className="flex gap-4">
         <Card className="w-1/2">
           <CardContent className="p-4">
-            <div className="relative">
-              <video
-                ref={videoRef}
-                width="100%"
-                height="100%"
-                autoPlay
-                muted
-              ></video>
-              <canvas
-                ref={canvasRef}
-                width="720"
-                height="560"
-                className="absolute top-0 left-0"
-              ></canvas>
-              <Badge
-                variant={isPaused ? "secondary" : "destructive"}
-                className="absolute top-2 right-2 rounded-full"
-              >
-                {isPaused ? "Paused" : "Live"}
-              </Badge>
-            </div>
+            <Webcam
+              isPaused={isPaused}
+              onFaceDetected={handleFaceDetection}
+              faceMatcher={faceMatcher.current}
+            />
           </CardContent>
         </Card>
 
@@ -576,104 +601,7 @@ export default function Home() {
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Registered Users</span>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">Add new user</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add new user</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        Name
-                      </Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="photo" className="text-right">
-                        Photo
-                      </Label>
-                      <Button
-                        type="button"
-                        onClick={handleCapturePhoto}
-                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2 col-span-3"
-                      >
-                        <Camera className="mr-2" />{" "}
-                        <strong>Capture Photo</strong>
-                      </Button>
-                      {photoUrl && (
-                        <div>
-                          Captured photo: <a href={photoUrl}>{photoUrl}</a>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="audio" className="text-right">
-                        Audio
-                      </Label>
-                      <Input
-                        type="text"
-                        id="audio"
-                        value={searchQuery}
-                        onChange={handleSearchInputChange}
-                        placeholder="Search for a song"
-                        className="col-span-3"
-                      />
-                    </div>
-                    {showSearchResults && searchResults.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold mt-2">Search Results:</h3>
-                        <ul>
-                          {searchResults.map((track) => (
-                            <li
-                              key={track.id}
-                              className="cursor-pointer hover:bg-gray-100 p-2"
-                              onClick={() => handleTrackSelect(track)}
-                            >
-                              {track.name} -{" "}
-                              {track.artists.map((a) => a.name).join(", ")}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {selectedTrack && (
-                      <div>
-                        <h3 className="font-semibold">Selected Track:</h3>
-                        <p>
-                          {selectedTrack.name} -{" "}
-                          {selectedTrack.artists.map((a) => a.name).join(", ")}
-                        </p>
-                        <p>{selectedTrack.uri}</p>
-                      </div>
-                    )}
-                    <input
-                      type="hidden"
-                      name="audio_uri"
-                      value={audioUri || ""}
-                    />
-                    <input
-                      type="hidden"
-                      name="photo_url"
-                      value={photoUrl || ""}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">
-                      <strong>Add user</strong>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <RegisterUserModal onSuccess={fetchUsers} />
           </CardTitle>
         </CardHeader>
         <CardContent>
