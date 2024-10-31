@@ -19,10 +19,9 @@ import {
   Play,
   Volume2,
   UserPlus,
-  Trash2,
   Radio,
   MessageSquare,
-  Settings,
+  Zap,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
@@ -117,22 +116,13 @@ export default function Component() {
   ];
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr] gap-8 p-8">
+    <div className="grid grid-rows-[auto_auto_1fr_auto] gap-8 p-8">
       <header className="flex justify-between items-center relative">
         <Logo />
         <div className="flex gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>Contact Sales</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {systems.map((system) => (
-                <DropdownMenuItem key={system.slug}>
-                  <Link href={`/${system.slug}`}>{system.name}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button asChild>
+            <a href="mailto:sahil@gumroad.com">Contact Sales</a>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">Log into Dohr</Button>
@@ -149,30 +139,38 @@ export default function Component() {
           </DropdownMenu>
         </div>
       </header>
-      <main className="flex flex-col gap-6 max-w-[2000px] mx-auto w-full">
+      <div className="text-center py-16 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg">
+        <div className="flex items-center justify-center gap-4 text-4xl font-bold mb-4">
+          <Zap className="w-12 h-12 text-yellow-500" />
+          <h1>GET AMPED UP FOR WORK!</h1>
+        </div>
+        <p className="text-xl">
+          Set the tone for the rest of the day by playing your welcome song when
+          you walk in the door
+        </p>
+      </div>
+      <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[2000px] mx-auto w-full h-fit">
         {mainFeatures.map((mainFeature, index) => (
-          <Card key={index} className="p-8 lg:p-12 xl:p-16">
+          <Card key={index} className="p-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-4 text-2xl lg:text-3xl xl:text-4xl">
+              <CardTitle className="flex items-center gap-4 text-xl">
                 {mainFeature.icon}
                 <span>{mainFeature.title}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xl lg:text-2xl xl:text-3xl mb-8">
-                {mainFeature.text}
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <p className="text-lg mb-8">{mainFeature.text}</p>
+              <div className="flex flex-col gap-4">
                 {mainFeature.subFeatures.map((subFeature, subIndex) => (
-                  <Card key={subIndex} className="p-6">
+                  <Card key={subIndex} className="p-4">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
+                      <CardTitle className="flex items-center gap-2 text-base">
                         {subFeature.icon}
                         <span>{subFeature.title}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-base">{subFeature.text}</p>
+                      <p className="text-sm">{subFeature.text}</p>
                     </CardContent>
                   </Card>
                 ))}

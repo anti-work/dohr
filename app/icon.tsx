@@ -32,7 +32,8 @@ export default function Icon() {
             backgroundColor: "currentColor",
             display: "block",
             position: "absolute",
-            right: "1em",
+            right: "1.5em",
+            top: "2.5em",
           }}
         />
       </div>
