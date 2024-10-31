@@ -8,14 +8,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { registerUser, searchSpotify } from "@/app/actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Camera } from "lucide-react";
-import { Webcam } from "@/components/Webcam";
 
 interface SpotifyTrack {
   id: string;
@@ -41,7 +38,9 @@ export function RegisterUserModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const [audioUri, setAudioUri] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
 
@@ -81,7 +80,12 @@ export function RegisterUserModal({
     }
 
     try {
-      await registerUser(name, preloadedPhoto, selectedTrack.uri, selectedTrack.name);
+      await registerUser(
+        name,
+        preloadedPhoto,
+        selectedTrack.uri,
+        selectedTrack.name
+      );
       onSuccess?.();
     } catch (error) {
       console.error("Error registering user:", error);
@@ -162,7 +166,11 @@ export function RegisterUserModal({
               </div>
             )}
             <input type="hidden" name="audio_uri" value={audioUri || ""} />
-            <input type="hidden" name="photo_url" value={preloadedPhoto || ""} />
+            <input
+              type="hidden"
+              name="photo_url"
+              value={preloadedPhoto || ""}
+            />
           </div>
           <DialogFooter>
             <Button type="submit">
