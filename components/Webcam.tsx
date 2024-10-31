@@ -3,12 +3,15 @@
 import { useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import * as faceapi from "face-api.js";
+import { Button } from "@/components/ui/button";
+import { Camera } from "lucide-react";
 
 interface WebcamProps {
   isPaused?: boolean;
-  onFaceDetected?: (detection: faceapi.FaceDetection[]) => void;
+  onFaceDetected?: (detection: faceapi.WithFaceLandmarks<{ detection: faceapi.FaceDetection }, faceapi.FaceLandmarks68>[]) => void;
   faceMatcher?: faceapi.FaceMatcher;
   fullscreen?: boolean;
+  onCapture?: (blob: Blob) => void;
 }
 
 export function Webcam({
@@ -16,6 +19,7 @@ export function Webcam({
   onFaceDetected,
   faceMatcher,
   fullscreen = false,
+  onCapture,
 }: WebcamProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,6 +69,21 @@ export function Webcam({
     }
   }, [isPaused, onFaceDetected, faceMatcher]);
 
+  const handleCapture = () => {
+    if (!videoRef.current || !onCapture) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        onCapture(blob);
+      }
+    }, "image/jpeg");
+  };
+
   return (
     <div className={`relative ${fullscreen ? "h-screen w-screen" : ""}`}>
       <video ref={videoRef} width="100%" height="100%" autoPlay muted></video>
@@ -74,6 +93,18 @@ export function Webcam({
         height="560"
         className="absolute top-0 left-0"
       ></canvas>
+      {onCapture && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <Button
+            onClick={handleCapture}
+            size="lg"
+            variant="destructive"
+            className="rounded-full text-4xl w-24 h-24 p-0 flex items-center justify-center hover:scale-110 transition-transform"
+          >
+            <Camera className="h-24 w-24" />
+          </Button>
+        </div>
+      )}
       <Badge
         variant={isPaused ? "secondary" : "destructive"}
         className="absolute top-2 right-2 rounded-full"

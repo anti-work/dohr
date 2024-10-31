@@ -26,26 +26,24 @@ interface SpotifyTrack {
 }
 
 interface RegisterUserModalProps {
-  trigger?: React.ReactNode;
   preloadedPhoto?: string;
   onSuccess?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function RegisterUserModal({
-  trigger,
   preloadedPhoto,
   onSuccess,
+  isOpen,
+  onOpenChange,
 }: RegisterUserModalProps) {
-  const [photoUrl, setPhotoUrl] = useState<string>(preloadedPhoto || "");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [audioUri, setAudioUri] = useState<string>("");
   const [showSearchResults, setShowSearchResults] = useState(true);
-  const [showWebcam, setShowWebcam] = useState(!preloadedPhoto);
 
   const handleSearch = async () => {
     if (searchTimeout) {
@@ -77,13 +75,13 @@ export function RegisterUserModal({
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
 
-    if (!selectedTrack?.uri || !photoUrl) {
+    if (!selectedTrack?.uri || !preloadedPhoto) {
       alert("Please provide all required information");
       return;
     }
 
     try {
-      await registerUser(name, photoUrl, selectedTrack.uri, selectedTrack.name);
+      await registerUser(name, preloadedPhoto, selectedTrack.uri, selectedTrack.name);
       onSuccess?.();
     } catch (error) {
       console.error("Error registering user:", error);
@@ -92,10 +90,7 @@ export function RegisterUserModal({
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {trigger || <Button variant="outline">Register New User</Button>}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Register New User</DialogTitle>
@@ -112,30 +107,19 @@ export function RegisterUserModal({
               <Label htmlFor="photo" className="text-right">
                 Photo
               </Label>
-              {showWebcam ? (
-                <div className="col-span-3">
-                  <Webcam fullscreen={false} />
-                </div>
-              ) : (
-                <div className="col-span-3">
-                  {photoUrl ? (
-                    <div className="flex flex-col gap-2">
-                      <Image
-                        src={photoUrl}
-                        alt="Captured"
-                        className="w-48 h-48 object-cover rounded"
-                      />
-                      <Button type="button" onClick={() => setShowWebcam(true)}>
-                        <Camera className="mr-2" /> Retake Photo
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button type="button" onClick={() => setShowWebcam(true)}>
-                      <Camera className="mr-2" /> Capture Photo
-                    </Button>
-                  )}
-                </div>
-              )}
+              <div className="col-span-3">
+                {preloadedPhoto && (
+                  <div className="flex flex-col gap-2">
+                    <Image
+                      src={preloadedPhoto}
+                      alt="Captured"
+                      width={192}
+                      height={192}
+                      className="w-48 h-48 object-cover rounded"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="audio" className="text-right">
@@ -178,7 +162,7 @@ export function RegisterUserModal({
               </div>
             )}
             <input type="hidden" name="audio_uri" value={audioUri || ""} />
-            <input type="hidden" name="photo_url" value={photoUrl || ""} />
+            <input type="hidden" name="photo_url" value={preloadedPhoto || ""} />
           </div>
           <DialogFooter>
             <Button type="submit">
