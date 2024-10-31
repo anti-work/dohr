@@ -49,8 +49,8 @@ export default function Component() {
     },
     {
       icon: <Bell className="w-6 h-6" />,
-      title: "Multi-Channel Notifications",
-      text: "Instant notifications via Slack, Telegram and more to keep your team in sync and social",
+      title: "Stay In Sync",
+      text: "Instant notifications via Slack, Telegram and more to keep your team in sync",
     },
   ];
 
