@@ -46,14 +46,14 @@ export default function Component() {
       text: "Customized audio playback based on identification",
     },
     {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Web Interface",
-      text: "Admin interface for user registration and management",
-    },
-    {
       icon: <Bell className="w-6 h-6" />,
       title: "Notifications",
       text: "Pings sent to Slack and Telegram",
+    },
+    {
+      icon: <Shield className="w-6 h-6" />,
+      title: "Admin Interface",
+      text: "For user registration and management",
     },
   ];
 
@@ -69,11 +69,11 @@ export default function Component() {
                   An AI-Powered Doorbell
                 </h2>
               </div>
-              <div className="grid grid-cols-1 gap-4 mt-8 text-left">
+              <div className="grid grid-cols-1 gap-4 mt-8">
                 {features.map((feature, index) => (
                   <Card key={index}>
                     <CardHeader>
-                      <CardTitle className="flex items-center space-x-4">
+                      <CardTitle className="flex items-center justify-center space-x-3">
                         {feature.icon}
                         <span>{feature.title}</span>
                       </CardTitle>
