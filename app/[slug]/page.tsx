@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Camera, Pause, Play, Music, Lock } from "lucide-react";
+import { Pause, Play, Music, Lock } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,27 +9,16 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { upload } from "@vercel/blob/client";
 import * as faceapi from "face-api.js";
 import {
   getUsers,
   removeUser,
-  registerUser,
   togglePause,
   getPauseState,
-  searchSpotify,
   notifyAdmin,
   getEntrances,
   registerEntrance,
@@ -74,14 +62,6 @@ interface Entrance {
   timestamp: string;
 }
 
-interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists: { name: string }[];
-  preview_url: string;
-  uri: string;
-}
-
 interface SpotifyDevice {
   id: string;
   name: string;
@@ -92,15 +72,6 @@ export default function Home() {
   const [pin, setPin] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [isPaused, setIsPaused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
-  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrack | null>(null);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
-  const [audioUri, setAudioUri] = useState<string>("");
-  const [showSearchResults, setShowSearchResults] = useState(true);
-  const [photoUrl, setPhotoUrl] = useState<string>("");
   const [entrances, setEntrances] = useState<
     { name: string; timestamp: string; id: number }[]
   >([]);
@@ -308,96 +279,6 @@ export default function Home() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-
-    if (!audioUri) {
-      alert("Please select a track");
-      return;
-    }
-
-    if (!photoUrl) {
-      alert("Please capture a photo");
-      return;
-    }
-
-    if (!selectedTrack) {
-      alert("Please select a track");
-      return;
-    }
-
-    try {
-      const img = await faceapi.fetchImage(photoUrl);
-      const detection = await faceapi
-        .detectSingleFace(img)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-      if (detection) {
-        await registerUser(name, photoUrl, audioUri, selectedTrack.name);
-        fetchUsers();
-        setSelectedTrack(null);
-        setSearchQuery("");
-        setSearchResults([]);
-        setAudioUri("");
-        setPhotoUrl("");
-      } else {
-        alert("No face detected in the captured photo");
-      }
-    } catch (error) {
-      console.error("Error registering user:", error);
-      alert("Error registering user");
-    }
-  };
-
-  const handleSearch = async () => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const newTimeout = setTimeout(async () => {
-      const results = await searchSpotify(searchQuery);
-      setSearchResults(results);
-      setShowSearchResults(true);
-    }, 300); // 300ms debounce
-
-    setSearchTimeout(newTimeout);
-  };
-
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    handleSearch();
-  };
-
-  const handleTrackSelect = (track: SpotifyTrack) => {
-    setSelectedTrack(track);
-    setAudioUri(track.uri);
-    setShowSearchResults(false);
-  };
-
-  const handleCapturePhoto = async () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
-
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          const file = new File([blob], "captured_photo.jpg", {
-            type: "image/jpeg",
-          });
-          const newBlob = await upload(file.name, file, {
-            access: "public",
-            handleUploadUrl: "/api/avatar/upload",
-          });
-          setPhotoUrl(newBlob.url);
-        }
-      }, "image/jpeg");
-    }
-  };
-
   const fetchEntrances = async () => {
     try {
       const data = await getEntrances();
@@ -438,9 +319,7 @@ export default function Home() {
       const bestMatch = faceMatcher.current.findBestMatch(detection.descriptor);
 
       if (bestMatch.distance < 0.6) {
-        const matchedUser = users.find(
-          (user) => user.name === bestMatch.label
-        );
+        const matchedUser = users.find((user) => user.name === bestMatch.label);
 
         if (matchedUser) {
           const isNewEntry = await registerEntrance(matchedUser.name);

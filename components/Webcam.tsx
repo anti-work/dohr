@@ -2,15 +2,21 @@
 
 import { useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import * as faceapi from "face-api.js";
 
 interface WebcamProps {
   isPaused?: boolean;
-  onFaceDetected?: (detection: any) => void;
-  faceMatcher?: any;
+  onFaceDetected?: (detection: faceapi.FaceDetection[]) => void;
+  faceMatcher?: faceapi.FaceMatcher;
   fullscreen?: boolean;
 }
 
-export function Webcam({ isPaused = false, onFaceDetected, faceMatcher, fullscreen = false }: WebcamProps) {
+export function Webcam({
+  isPaused = false,
+  onFaceDetected,
+  faceMatcher,
+  fullscreen = false,
+}: WebcamProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -30,7 +36,12 @@ export function Webcam({ isPaused = false, onFaceDetected, faceMatcher, fullscre
   }, []);
 
   useEffect(() => {
-    if (videoRef.current && canvasRef.current && onFaceDetected && faceMatcher) {
+    if (
+      videoRef.current &&
+      canvasRef.current &&
+      onFaceDetected &&
+      faceMatcher
+    ) {
       videoRef.current.addEventListener("play", () => {
         const displaySize = {
           width: videoRef.current!.width,
@@ -55,14 +66,8 @@ export function Webcam({ isPaused = false, onFaceDetected, faceMatcher, fullscre
   }, [isPaused, onFaceDetected, faceMatcher]);
 
   return (
-    <div className={`relative ${fullscreen ? 'h-screen w-screen' : ''}`}>
-      <video
-        ref={videoRef}
-        width="100%"
-        height="100%"
-        autoPlay
-        muted
-      ></video>
+    <div className={`relative ${fullscreen ? "h-screen w-screen" : ""}`}>
+      <video ref={videoRef} width="100%" height="100%" autoPlay muted></video>
       <canvas
         ref={canvasRef}
         width="720"

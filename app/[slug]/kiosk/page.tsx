@@ -9,9 +9,8 @@ import { upload } from "@vercel/blob/client";
 
 export default function KioskPage() {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
     const video = document.querySelector("video");
     if (!video) return;
 
@@ -30,7 +29,6 @@ export default function KioskPage() {
           handleUploadUrl: "/api/avatar/upload",
         });
         setCapturedPhoto(newBlob.url);
-        setShowRegisterModal(true);
       }
     }, "image/jpeg");
   };
@@ -48,11 +46,11 @@ export default function KioskPage() {
           <Camera className="h-24 w-24" />
         </Button>
       </div>
-      {showRegisterModal && capturedPhoto && (
+      {capturedPhoto && (
         <RegisterUserModal
+          trigger={<></>}
           preloadedPhoto={capturedPhoto}
           onSuccess={() => {
-            setShowRegisterModal(false);
             setCapturedPhoto(null);
           }}
         />
