@@ -90,7 +90,7 @@ export default function Component() {
     {
       icon: <Bell className="w-6 h-6" />,
       title: "Stay In Sync",
-      text: 'Instant notifications via Slack, Telegram and more to keep your team in sync with "Sahil is in the building!" notifications',
+      text: "Instant notifications via Slack, Telegram and more to keep your team socially connected with notifications",
     },
   ];
 
