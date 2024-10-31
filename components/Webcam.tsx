@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import * as faceapi from "face-api.js";
 import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
-import { addToQueue, registerEntrance, notifyAdmin, generateAndPlayAudio } from "@/app/actions";
+import {
+  addToQueue,
+  registerEntrance,
+  notifyAdmin,
+  generateAndPlayAudio,
+} from "@/app/actions";
 
 interface WebcamProps {
   isPaused?: boolean;
@@ -96,17 +101,27 @@ export function Webcam({
             .withFaceLandmarks()
             .withFaceDescriptors();
 
-          const resizedDetections = faceapi.resizeResults(detections, displaySize);
+          const resizedDetections = faceapi.resizeResults(
+            detections,
+            displaySize
+          );
 
           if (canvasRef.current) {
             const ctx = canvasRef.current.getContext("2d");
             if (ctx) {
-              ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+              ctx.clearRect(
+                0,
+                0,
+                canvasRef.current.width,
+                canvasRef.current.height
+              );
               faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
 
               for (const detection of resizedDetections) {
                 if (faceMatcher.current) {
-                  const bestMatch = faceMatcher.current.findBestMatch(detection.descriptor);
+                  const bestMatch = faceMatcher.current.findBestMatch(
+                    detection.descriptor
+                  );
                   const box = detection.detection.box;
                   const drawOptions = {
                     label: bestMatch.toString(),
@@ -124,7 +139,9 @@ export function Webcam({
                       (user) => user.name === bestMatch.label
                     );
                     if (matchedUser) {
-                      const isNewEntry = await registerEntrance(matchedUser.name);
+                      const isNewEntry = await registerEntrance(
+                        matchedUser.name
+                      );
                       if (isNewEntry) {
                         await addToQueue(matchedUser.audio_uri);
                         const message = `${matchedUser.name} is in the building!`;
@@ -132,7 +149,9 @@ export function Webcam({
                         onEntranceRegistered?.();
 
                         try {
-                          const base64Audio = await generateAndPlayAudio(message);
+                          const base64Audio = await generateAndPlayAudio(
+                            message
+                          );
                           const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
                           const audio = new Audio(audioUrl);
                           audio.play();
