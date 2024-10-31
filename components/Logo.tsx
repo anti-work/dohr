@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { Music } from "lucide-react";
 
 interface LogoProps {
   className?: string;
@@ -21,7 +22,7 @@ const Logo = ({ className = "text-8xl" }: LogoProps) => {
   };
 
   return (
-    <div className={`inline-flex items-center ${className}`}>
+    <div className={`inline-flex items-center ${className} relative`}>
       <span>d</span>
       <motion.div
         className="relative mx-[-0.05em] min-w-[0.4em] cursor-pointer"
@@ -46,6 +47,34 @@ const Logo = ({ className = "text-8xl" }: LogoProps) => {
         <motion.div className="w-[0.1em] h-[0.1em] rounded-full bg-current inline-block absolute right-[0.05em]" />
       </motion.div>
       <span>hr</span>
+      {isAnimating && (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0, 0], y: [-10, -20, -25, -30] }}
+            transition={{ duration: 3, times: [0, 0.3, 0.7, 1], delay: 1 }}
+            className="absolute top-0 left-1/2 -translate-x-1/2"
+          >
+            <Music className="w-4 h-4" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0, 0], y: [-5, -15, -20, -25] }}
+            transition={{ duration: 3, times: [0, 0.3, 0.7, 1], delay: 1.2 }}
+            className="absolute top-0 left-1/3 -translate-x-1/2"
+          >
+            <Music className="w-3 h-3" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0, 0], y: [-8, -18, -23, -28] }}
+            transition={{ duration: 3, times: [0, 0.3, 0.7, 1], delay: 1.4 }}
+            className="absolute top-0 left-2/3 -translate-x-1/2"
+          >
+            <Music className="w-3.5 h-3.5" />
+          </motion.div>
+        </>
+      )}
     </div>
   );
 };
