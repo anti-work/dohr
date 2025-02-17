@@ -62,6 +62,22 @@ interface SpotifyDevice {
   name: string;
 }
 
+const SYSTEM_PIN = process.env.NEXT_PUBLIC_SYSTEM_PIN;  // Must be set in environment
+
+const hashPin = async (pin: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const isValidStoredPin = async (storedPin: string | null) => {
+  if (!storedPin) return false;
+  const hashedSystemPin = await hashPin(SYSTEM_PIN);
+  return storedPin === hashedSystemPin;
+};
+
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState("");
@@ -73,17 +89,29 @@ export default function Home() {
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [spotifyDevices, setSpotifyDevices] = useState<SpotifyDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<SpotifyDevice | null>(
-    null
+    null,
   );
 
-  const handlePinSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePinSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (pin === "825") {
+    if (pin === SYSTEM_PIN) {
       setIsAuthenticated(true);
+      const hashedPin = await hashPin(pin);
+      localStorage.setItem("dohrPin", hashedPin);
     } else {
       alert("Incorrect PIN");
     }
   };
+
+  useEffect(() => {
+    const validateStoredPin = async () => {
+      const storedPin = localStorage.getItem("dohrPin");
+      if (await isValidStoredPin(storedPin)) {
+        setIsAuthenticated(true);
+      }
+    };
+    validateStoredPin();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -245,7 +273,7 @@ export default function Home() {
                         "mr-2 h-4 w-4",
                         selectedDevice?.id === device.id
                           ? "opacity-100"
-                          : "opacity-0"
+                          : "opacity-0",
                       )}
                     />
                     {device.name}
